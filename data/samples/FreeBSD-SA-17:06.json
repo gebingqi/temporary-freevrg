@@ -1,0 +1,33 @@
+{
+  "id": "FreeBSD-SA-17:06",
+  "cve": [
+    "CVE-2016-6515"
+  ],
+  "subsystem": "openssh",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "d4649e920a1dc5448f530e327408a351ccc2ccce"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nOpenSSH is an implementation of the SSH protocol suite, providing an\nencrypted and authenticated transport for a variety of services,\nincluding remote shell access.\n\nOpenSSH supports a built-in password authentication method, which is\nenabled with PasswordAuthentication.  This option is disabled by\ndefault on FreeBSD.\n\nProblem Description:\nThere is no limit on the password length.\n\nImpact:\nA remote attacker may be able to cause an affected SSH server to use\nexcessive amount of CPU by sending very long passwords, when\nPasswordAuthentication is enabled by the system administrator.\n\nWorkaround:\nDisable PasswordAuthentication in /etc/ssh/sshd_config and restart\nsshd.  This is the default FreeBSD configuration.",
+  "files_changed": [
+    "crypto/openssh/auth-passwd.c"
+  ],
+  "diff": "### commit d4649e920a1dc5448f530e327408a351ccc2ccce\ndiff --git a/crypto/openssh/auth-passwd.c b/crypto/openssh/auth-passwd.c\nindex 63ccf3cabe7d76..f6825ecc06553b 100644\n--- a/crypto/openssh/auth-passwd.c\n+++ b/crypto/openssh/auth-passwd.c\n@@ -66,6 +66,8 @@ extern login_cap_t *lc;\n #define DAY\t\t(24L * 60 * 60) /* 1 day in seconds */\n #define TWO_WEEKS\t(2L * 7 * DAY)\t/* 2 weeks in seconds */\n \n+#define MAX_PASSWORD_LEN\t1024\n+\n void\n disable_forwarding(void)\n {\n@@ -87,6 +89,9 @@ auth_password(Authctxt *authctxt, const char *password)\n \tstatic int expire_checked = 0;\n #endif\n \n+\tif (strlen(password) > MAX_PASSWORD_LEN)\n+\t\treturn 0;\n+\n #ifndef HAVE_CYGWIN\n \tif (pw->pw_uid == 0 && options.permit_root_login != PERMIT_YES)\n \t\tok = 0;\n",
+  "extractable": true,
+  "before_code": {
+    "crypto/openssh/auth-passwd.c::disable_forwarding": "void\ndisable_forwarding(void)\n{\n\tno_port_forwarding_flag = 1;\n\tno_agent_forwarding_flag = 1;\n\tno_x11_forwarding_flag = 1;\n}",
+    "crypto/openssh/auth-passwd.c::auth_password": "int\nauth_password(Authctxt *authctxt, const char *password)\n{\n\tstruct passwd * pw = authctxt->pw;\n\tint result, ok = authctxt->valid;\n#if defined(USE_SHADOW) && defined(HAS_SHADOW_EXPIRE)\n\tstatic int expire_checked = 0;\n#endif\n\n#ifndef HAVE_CYGWIN\n\tif (pw->pw_uid == 0 && options.permit_root_login != PERMIT_YES)\n\t\tok = 0;\n#endif\n\tif (*password == '\\0' && options.permit_empty_passwd == 0)\n\t\treturn 0;\n\n#ifdef KRB5\n\tif (options.kerberos_authentication == 1) {\n\t\tint ret = auth_krb5_password(authctxt, password);\n\t\tif (ret == 1 || ret == 0)\n\t\t\treturn ret && ok;\n\t\t/* Fall back to ordinary passwd authentication. */\n\t}\n#endif\n#ifdef HAVE_CYGWIN\n\t{\n\t\tHANDLE hToken = cygwin_logon_user(pw, password);\n\n\t\tif (hToken == INVALID_HANDLE_VALUE)\n\t\t\treturn 0;\n\t\tcygwin_set_impersonation_token(hToken);\n\t\treturn ok;\n\t}\n#endif\n#ifdef USE_PAM\n\tif (options.use_pam)\n\t\treturn (sshpam_auth_passwd(authctxt, password) && ok);\n#endif\n#if defined(USE_SHADOW) && defined(HAS_SHADOW_EXPIRE)\n\tif (!expire_checked) {\n\t\texpire_checked = 1;\n\t\tif (auth_shadow_pwexpired(authctxt))\n\t\t\tauthctxt->force_pwchange = 1;\n\t}\n#endif\n\tresult = sys_auth_passwd(authctxt, password);\n\tif (authctxt->force_pwchange)\n\t\tdisable_forwarding();\n\treturn (result && ok);\n}"
+  },
+  "after_code": {
+    "crypto/openssh/auth-passwd.c::disable_forwarding": "void\ndisable_forwarding(void)\n{\n\tno_port_forwarding_flag = 1;\n\tno_agent_forwarding_flag = 1;\n\tno_x11_forwarding_flag = 1;\n}",
+    "crypto/openssh/auth-passwd.c::auth_password": "int\nauth_password(Authctxt *authctxt, const char *password)\n{\n\tstruct passwd * pw = authctxt->pw;\n\tint result, ok = authctxt->valid;\n#if defined(USE_SHADOW) && defined(HAS_SHADOW_EXPIRE)\n\tstatic int expire_checked = 0;\n#endif\n\n\tif (strlen(password) > MAX_PASSWORD_LEN)\n\t\treturn 0;\n\n#ifndef HAVE_CYGWIN\n\tif (pw->pw_uid == 0 && options.permit_root_login != PERMIT_YES)\n\t\tok = 0;\n#endif\n\tif (*password == '\\0' && options.permit_empty_passwd == 0)\n\t\treturn 0;\n\n#ifdef KRB5\n\tif (options.kerberos_authentication == 1) {\n\t\tint ret = auth_krb5_password(authctxt, password);\n\t\tif (ret == 1 || ret == 0)\n\t\t\treturn ret && ok;\n\t\t/* Fall back to ordinary passwd authentication. */\n\t}\n#endif\n#ifdef HAVE_CYGWIN\n\t{\n\t\tHANDLE hToken = cygwin_logon_user(pw, password);\n\n\t\tif (hToken == INVALID_HANDLE_VALUE)\n\t\t\treturn 0;\n\t\tcygwin_set_impersonation_token(hToken);\n\t\treturn ok;\n\t}\n#endif\n#ifdef USE_PAM\n\tif (options.use_pam)\n\t\treturn (sshpam_auth_passwd(authctxt, password) && ok);\n#endif\n#if defined(USE_SHADOW) && defined(HAS_SHADOW_EXPIRE)\n\tif (!expire_checked) {\n\t\texpire_checked = 1;\n\t\tif (auth_shadow_pwexpired(authctxt))\n\t\t\tauthctxt->force_pwchange = 1;\n\t}\n#endif\n\tresult = sys_auth_passwd(authctxt, password);\n\tif (authctxt->force_pwchange)\n\t\tdisable_forwarding();\n\treturn (result && ok);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

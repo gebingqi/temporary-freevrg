@@ -1,0 +1,40 @@
+{
+  "id": "FreeBSD-SA-15:24",
+  "cve": [
+    "CVE-2015-7236"
+  ],
+  "subsystem": "rpcbind",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "2757faf97179806db8cd93efd546fabd73ed4cd1"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nSun RPC is a remote procedure call framework which allows clients to invoke\nprocedures in a server process over a network transparently.\n\nThe rpcbind(8) utility is a server that converts RPC program numbers into\nuniversal addresses.  It must be running on the host to be able to make RPC\ncalls on a server on that machine.\n\nThe Sun RPC framework uses a netbuf structure to represent the transport\nspecific form of a universal transport address.  The structure is expected\nto be opaque to consumers.  In the current implementation, the structure\ncontains a pointer to a buffer that holds the actual address.\n\nProblem Description:\nIn rpcbind(8), netbuf structures are copied directly, which would result in\ntwo netbuf structures that reference to one shared address buffer.  When one\nof the two netbuf structures is freed, access to the other netbuf structure\nwould result in an undefined result that may crash the rpcbind(8) daemon.\n\nImpact:\nA remote attacker who can send specifically crafted packets to the rpcbind(8)\ndaemon can cause it to crash, resulting in a denial of service condition.\n\nWorkaround:\nNo workaround is available, but systems that do not provide the rpcbind(8)\nservice to untrusted systems, or do not provide any RPC services are not\nvulnerable.  On FreeBSD, typical RPC based services includes NIS and NFS.\n\nAlternatively, rpcbind(8) can be configured to bind on specific IP\naddress(es) by using the '-h' option.  This may be used to reduce the attack\nvector when the system has multiple network interfaces and when some of them\nwould face an untrusted network.",
+  "files_changed": [
+    "usr.sbin/rpcbind/rpcb_svc_com.c"
+  ],
+  "diff": "### commit 2757faf97179806db8cd93efd546fabd73ed4cd1\ndiff --git a/UPDATING b/UPDATING\nindex c877003cc55b24..48ab7fd71bba1c 100644\n--- a/UPDATING\n+++ b/UPDATING\n@@ -16,6 +16,10 @@ from older versions of FreeBSD, try WITHOUT_CLANG to bootstrap to the tip of\n stable/10, and then rebuild without this option. The bootstrap process from\n older version of current is a bit fragile.\n \n+20150929:\tp4\tFreeBSD-SA-15:24.rpcbind\n+\n+\tFix rpcbind(8) remote denial of service. [SA-15:24]\n+\n 20150916:\tp3\tFreeBSD-EN-15:16.pw\n \t\t\tFreeBSD-EN-15:17.libc\n \t\t\tFreeBSD-EN-15:18.pkg\ndiff --git a/sys/conf/newvers.sh b/sys/conf/newvers.sh\nindex 2c29cee14a6ec1..a026b66f1ff1de 100644\n--- a/sys/conf/newvers.sh\n+++ b/sys/conf/newvers.sh\n@@ -32,7 +32,7 @@\n \n TYPE=\"FreeBSD\"\n REVISION=\"10.2\"\n-BRANCH=\"RELEASE-p3\"\n+BRANCH=\"RELEASE-p4\"\n if [ \"X${BRANCH_OVERRIDE}\" != \"X\" ]; then\n \tBRANCH=${BRANCH_OVERRIDE}\n fi\ndiff --git a/usr.sbin/rpcbind/rpcb_svc_com.c b/usr.sbin/rpcbind/rpcb_svc_com.c\nindex f90dc5964b5f30..a72527343aa33e 100644\n--- a/usr.sbin/rpcbind/rpcb_svc_com.c\n+++ b/usr.sbin/rpcbind/rpcb_svc_com.c\n@@ -48,6 +48,7 @@\n #include <rpc/rpc.h>\n #include <rpc/rpcb_prot.h>\n #include <rpc/svc_dg.h>\n+#include <assert.h>\n #include <netconfig.h>\n #include <errno.h>\n #include <syslog.h>\n@@ -1048,19 +1049,31 @@ netbufcmp(struct netbuf *n1, struct netbuf *n2)\n \treturn ((n1->len != n2->len) || memcmp(n1->buf, n2->buf, n1->len));\n }\n \n+static bool_t\n+netbuf_copybuf(struct netbuf *dst, const struct netbuf *src)\n+{\n+\n+\tassert(dst->buf == NULL);\n+\n+\tif ((dst->buf = malloc(src->len)) == NULL)\n+\t\treturn (FALSE);\n+\n+\tdst->maxlen = dst->len = src->len;\n+\tmemcpy(dst->buf, src->buf, src->len);\n+\treturn (TRUE);\n+}\n+\n static struct netbuf *\n netbufdup(struct netbuf *ap)\n {\n \tstruct netbuf  *np;\n \n-\tif ((np = malloc(sizeof(struct netbuf))) == NULL)\n+\tif ((np = calloc(1, sizeof(struct netbuf))) == NULL)\n \t\treturn (NULL);\n-\tif ((np->buf = malloc(ap->len)) == NULL) {\n+\tif (netbuf_copybuf(np, ap) == FALSE) {\n \t\tfree(np);\n \t\treturn (NULL);\n \t}\n-\tnp->maxlen = np->len = ap->len;\n-\tmemcpy(np->buf, ap->buf, ap->len);\n \treturn (np);\n }\n \n@@ -1068,6 +1081,7 @@ static void\n netbuffree(struct netbuf *ap)\n {\n \tfree(ap->buf);\n+\tap->buf = NULL;\n \tfree(ap);\n }\n \n@@ -1185,7 +1199,7 @@ xprt_set_caller(SVCXPRT *xprt, struct finfo *fi)\n {\n \tu_int32_t *xidp;\n \n-\t*(svc_getrpccaller(xprt)) = *(fi->caller_addr);\n+\tnetbuf_copybuf(svc_getrpccaller(xprt), fi->caller_addr);\n \txidp = __rpcb_get_dg_xidp(xprt);\n \t*xidp = fi->caller_xid;\n }\n",
+  "extractable": true,
+  "before_code": {
+    "usr.sbin/rpcbind/rpcb_svc_com.c::netbufcmp": "static int\nnetbufcmp(struct netbuf *n1, struct netbuf *n2)\n{\n\treturn ((n1->len != n2->len) || memcmp(n1->buf, n2->buf, n1->len));\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::netbufdup": "static struct netbuf *\nnetbufdup(struct netbuf *ap)\n{\n\tstruct netbuf  *np;\n\n\tif ((np = malloc(sizeof(struct netbuf))) == NULL)\n\t\treturn (NULL);\n\tif ((np->buf = malloc(ap->len)) == NULL) {\n\t\tfree(np);\n\t\treturn (NULL);\n\t}\n\tnp->maxlen = np->len = ap->len;\n\tmemcpy(np->buf, ap->buf, ap->len);\n\treturn (np);\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::netbuffree": "static void\nnetbuffree(struct netbuf *ap)\n{\n\tfree(ap->buf);\n\tfree(ap);\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::xprt_set_caller": "static void\nxprt_set_caller(SVCXPRT *xprt, struct finfo *fi)\n{\n\tu_int32_t *xidp;\n\n\t*(svc_getrpccaller(xprt)) = *(fi->caller_addr);\n\txidp = __rpcb_get_dg_xidp(xprt);\n\t*xidp = fi->caller_xid;\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::<top-level>": "/* L48 */ #include <rpc/rpc.h>\n/* L49 */ #include <rpc/rpcb_prot.h>\n/* L50 */ #include <rpc/svc_dg.h>\n/* L51 */ #include <netconfig.h>\n/* L52 */ #include <errno.h>\n/* L53 */ #include <syslog.h>\n/* L1050 */ \n/* L1066 */ \n/* L1073 */ "
+  },
+  "after_code": {
+    "usr.sbin/rpcbind/rpcb_svc_com.c::netbufcmp": "static int\nnetbufcmp(struct netbuf *n1, struct netbuf *n2)\n{\n\treturn ((n1->len != n2->len) || memcmp(n1->buf, n2->buf, n1->len));\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::netbuf_copybuf": "static bool_t\nnetbuf_copybuf(struct netbuf *dst, const struct netbuf *src)\n{\n\n\tassert(dst->buf == NULL);\n\n\tif ((dst->buf = malloc(src->len)) == NULL)\n\t\treturn (FALSE);\n\n\tdst->maxlen = dst->len = src->len;\n\tmemcpy(dst->buf, src->buf, src->len);\n\treturn (TRUE);\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::netbufdup": "static struct netbuf *\nnetbufdup(struct netbuf *ap)\n{\n\tstruct netbuf  *np;\n\n\tif ((np = calloc(1, sizeof(struct netbuf))) == NULL)\n\t\treturn (NULL);\n\tif (netbuf_copybuf(np, ap) == FALSE) {\n\t\tfree(np);\n\t\treturn (NULL);\n\t}\n\treturn (np);\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::netbuffree": "static void\nnetbuffree(struct netbuf *ap)\n{\n\tfree(ap->buf);\n\tap->buf = NULL;\n\tfree(ap);\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::xprt_set_caller": "static void\nxprt_set_caller(SVCXPRT *xprt, struct finfo *fi)\n{\n\tu_int32_t *xidp;\n\n\tnetbuf_copybuf(svc_getrpccaller(xprt), fi->caller_addr);\n\txidp = __rpcb_get_dg_xidp(xprt);\n\t*xidp = fi->caller_xid;\n}",
+    "usr.sbin/rpcbind/rpcb_svc_com.c::<top-level>": "/* L48 */ #include <rpc/rpc.h>\n/* L49 */ #include <rpc/rpcb_prot.h>\n/* L50 */ #include <rpc/svc_dg.h>\n/* L51 */ #include <assert.h>\n/* L52 */ #include <netconfig.h>\n/* L53 */ #include <errno.h>\n/* L54 */ #include <syslog.h>\n/* L1051 */ \n/* L1065 */ \n/* L1079 */ \n/* L1087 */ "
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

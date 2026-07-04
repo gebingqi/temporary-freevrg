@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-16:33",
+  "cve": [
+    "CVE-2016-8858"
+  ],
+  "subsystem": "openssh",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "b51484f9495099ad6fbeb0b4f77b1d4215963260"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nOpenSSH is an implementation of the SSH protocol suite, providing an\nencrypted and authenticated transport for a variety of services,\nincluding remote shell access.\n\nDuring the SSH handshake procedure, the client and server exchanges the\nsupported encryption, MAC and compression algorithms along with other\ninformation to negotiate algorithms for initial key exchange, with a\nmessage named SSH_MSG_KEXINIT.\n\nProblem Description:\nWhen processing the SSH_MSG_KEXINIT message, the server could allocate\nup to a few hundreds of megabytes of memory per each connection, before\nany authentication take place.\n\nImpact:\nA remote attacker may be able to cause a SSH server to allocate an excessive\namount of memory.  Note that the default MaxStartups setting on FreeBSD will\nlimit the effectiveness of this attack.\n\nWorkaround:\nNo workaround is available, but systems where sshd(8) is not used are\nnot vulnerable.",
+  "files_changed": [
+    "crypto/openssh/kex.c"
+  ],
+  "diff": "### commit b51484f9495099ad6fbeb0b4f77b1d4215963260\ndiff --git a/crypto/openssh/kex.c b/crypto/openssh/kex.c\nindex d371f47c48dd93..9c9f56228ea51b 100644\n--- a/crypto/openssh/kex.c\n+++ b/crypto/openssh/kex.c\n@@ -468,6 +468,7 @@ kex_input_kexinit(int type, u_int32_t seq, void *ctxt)\n \tif (kex == NULL)\n \t\treturn SSH_ERR_INVALID_ARGUMENT;\n \n+\tssh_dispatch_set(ssh, SSH2_MSG_KEXINIT, NULL);\n \tptr = sshpkt_ptr(ssh, &dlen);\n \tif ((r = sshbuf_put(kex->peer, ptr, dlen)) != 0)\n \t\treturn r;\n",
+  "extractable": true,
+  "before_code": {
+    "crypto/openssh/kex.c::kex_input_kexinit": "int\nkex_input_kexinit(int type, u_int32_t seq, void *ctxt)\n{\n\tstruct ssh *ssh = ctxt;\n\tstruct kex *kex = ssh->kex;\n\tconst u_char *ptr;\n\tu_int i;\n\tsize_t dlen;\n\tint r;\n\n\tdebug(\"SSH2_MSG_KEXINIT received\");\n\tif (kex == NULL)\n\t\treturn SSH_ERR_INVALID_ARGUMENT;\n\n\tptr = sshpkt_ptr(ssh, &dlen);\n\tif ((r = sshbuf_put(kex->peer, ptr, dlen)) != 0)\n\t\treturn r;\n\n\t/* discard packet */\n\tfor (i = 0; i < KEX_COOKIE_LEN; i++)\n\t\tif ((r = sshpkt_get_u8(ssh, NULL)) != 0)\n\t\t\treturn r;\n\tfor (i = 0; i < PROPOSAL_MAX; i++)\n\t\tif ((r = sshpkt_get_string(ssh, NULL, NULL)) != 0)\n\t\t\treturn r;\n\t/*\n\t * XXX RFC4253 sec 7: \"each side MAY guess\" - currently no supported\n\t * KEX method has the server move first, but a server might be using\n\t * a custom method or one that we otherwise don't support. We should\n\t * be prepared to remember first_kex_follows here so we can eat a\n\t * packet later.\n\t * XXX2 - RFC4253 is kind of ambiguous on what first_kex_follows means\n\t * for cases where the server *doesn't* go first. I guess we should\n\t * ignore it when it is set for these cases, which is what we do now.\n\t */\n\tif ((r = sshpkt_get_u8(ssh, NULL)) != 0 ||\t/* first_kex_follows */\n\t    (r = sshpkt_get_u32(ssh, NULL)) != 0 ||\t/* reserved */\n\t    (r = sshpkt_get_end(ssh)) != 0)\n\t\t\treturn r;\n\n\tif (!(kex->flags & KEX_INIT_SENT))\n\t\tif ((r = kex_send_kexinit(ssh)) != 0)\n\t\t\treturn r;\n\tif ((r = kex_choose_conf(ssh)) != 0)\n\t\treturn r;\n\n\tif (kex->kex_type < KEX_MAX && kex->kex[kex->kex_type] != NULL)\n\t\treturn (kex->kex[kex->kex_type])(ssh);\n\n\treturn SSH_ERR_INTERNAL_ERROR;\n}"
+  },
+  "after_code": {
+    "crypto/openssh/kex.c::kex_input_kexinit": "int\nkex_input_kexinit(int type, u_int32_t seq, void *ctxt)\n{\n\tstruct ssh *ssh = ctxt;\n\tstruct kex *kex = ssh->kex;\n\tconst u_char *ptr;\n\tu_int i;\n\tsize_t dlen;\n\tint r;\n\n\tdebug(\"SSH2_MSG_KEXINIT received\");\n\tif (kex == NULL)\n\t\treturn SSH_ERR_INVALID_ARGUMENT;\n\n\tssh_dispatch_set(ssh, SSH2_MSG_KEXINIT, NULL);\n\tptr = sshpkt_ptr(ssh, &dlen);\n\tif ((r = sshbuf_put(kex->peer, ptr, dlen)) != 0)\n\t\treturn r;\n\n\t/* discard packet */\n\tfor (i = 0; i < KEX_COOKIE_LEN; i++)\n\t\tif ((r = sshpkt_get_u8(ssh, NULL)) != 0)\n\t\t\treturn r;\n\tfor (i = 0; i < PROPOSAL_MAX; i++)\n\t\tif ((r = sshpkt_get_string(ssh, NULL, NULL)) != 0)\n\t\t\treturn r;\n\t/*\n\t * XXX RFC4253 sec 7: \"each side MAY guess\" - currently no supported\n\t * KEX method has the server move first, but a server might be using\n\t * a custom method or one that we otherwise don't support. We should\n\t * be prepared to remember first_kex_follows here so we can eat a\n\t * packet later.\n\t * XXX2 - RFC4253 is kind of ambiguous on what first_kex_follows means\n\t * for cases where the server *doesn't* go first. I guess we should\n\t * ignore it when it is set for these cases, which is what we do now.\n\t */\n\tif ((r = sshpkt_get_u8(ssh, NULL)) != 0 ||\t/* first_kex_follows */\n\t    (r = sshpkt_get_u32(ssh, NULL)) != 0 ||\t/* reserved */\n\t    (r = sshpkt_get_end(ssh)) != 0)\n\t\t\treturn r;\n\n\tif (!(kex->flags & KEX_INIT_SENT))\n\t\tif ((r = kex_send_kexinit(ssh)) != 0)\n\t\t\treturn r;\n\tif ((r = kex_choose_conf(ssh)) != 0)\n\t\treturn r;\n\n\tif (kex->kex_type < KEX_MAX && kex->kex[kex->kex_type] != NULL)\n\t\treturn (kex->kex[kex->kex_type])(ssh);\n\n\treturn SSH_ERR_INTERNAL_ERROR;\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

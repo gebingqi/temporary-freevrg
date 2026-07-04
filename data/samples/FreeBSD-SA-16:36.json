@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-16:36",
+  "cve": [
+    "CVE-2016-1888"
+  ],
+  "subsystem": "telnetd",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "35b582285dabe095d850552eafdafad41f265678"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nThe FreeBSD telnet daemon, telnetd(8), implements the server side of the\nTELNET virtual terminal protocol.  It has been disabled by default in\nFreeBSD since August 2001, and due to the lack of cryptographic security\nin the TELNET protocol, it is strongly recommended that the SSH protocol\nbe used instead.  The FreeBSD telnet daemon can be enabled via the\n/etc/inetd.conf configuration file and the inetd(8) daemon.\n\nAfter a user is connected, telnetd executes the login(1) program or a\nsimilar program specified by the -p <loginprog> argument.  In order to do\nso, it constructs an array of command line arguments which are passed to\nexecv(3).\n\nProblem Description:\nAn unexpected sequence of memory allocation failures combined with\ninsufficient error checking could result in the construction and\nexecution of an argument sequence that was not intended.\n\nImpact:\nAn attacker who controls the sequence of memory allocation failures and\nsuccess may cause login(1) to run without authentication and may be able\nto cause misbehavior of login(1) replacements.\n\nNo practical way of controlling these memory allocation failures is\nknown at this time.\n\nWorkaround:\nNo workaround is available, but systems not running the telnet daemon\nare not vulnerable.\n\nNote that the telnet daemon is usually run via inetd, and consequently\nwill not show up in a process listing unless a connection is currently\nactive; to determine if it is enabled, run\n\n$ ps ax | grep telnetd | grep -v grep\n$ grep telnetd /etc/inetd.conf | grep -vE '^#'\n\nIf any output is produced, your system may be vulnerable.",
+  "files_changed": [
+    "contrib/telnet/telnetd/sys_term.c"
+  ],
+  "diff": "### commit 35b582285dabe095d850552eafdafad41f265678\ndiff --git a/contrib/telnet/telnetd/sys_term.c b/contrib/telnet/telnetd/sys_term.c\nindex bdc43f6e1a2683..62b28b8c4e974e 100644\n--- a/contrib/telnet/telnetd/sys_term.c\n+++ b/contrib/telnet/telnetd/sys_term.c\n@@ -1159,7 +1159,7 @@ addarg(char **argv, const char *val)\n \t\t */\n \t\targv = (char **)malloc(sizeof(*argv) * 12);\n \t\tif (argv == NULL)\n-\t\t\treturn(NULL);\n+\t\t\tfatal(net, \"failure allocating argument space\");\n \t\t*argv++ = (char *)10;\n \t\t*argv = (char *)0;\n \t}\n@@ -1170,11 +1170,12 @@ addarg(char **argv, const char *val)\n \t\t*argv = (char *)((long)(*argv) + 10);\n \t\targv = (char **)realloc(argv, sizeof(*argv)*((long)(*argv) + 2));\n \t\tif (argv == NULL)\n-\t\t\treturn(NULL);\n+\t\t\tfatal(net, \"failure allocating argument space\");\n \t\targv++;\n \t\tcpp = &argv[(long)argv[-1] - 10];\n \t}\n-\t*cpp++ = strdup(val);\n+\tif ((*cpp++ = strdup(val)) == NULL)\n+\t\tfatal(net, \"failure allocating argument space\");\n \t*cpp = 0;\n \treturn(argv);\n }\n",
+  "extractable": true,
+  "before_code": {
+    "contrib/telnet/telnetd/sys_term.c::addarg": "static char **\naddarg(char **argv, const char *val)\n{\n\tchar **cpp;\n\n\tif (argv == NULL) {\n\t\t/*\n\t\t * 10 entries, a leading length, and a null\n\t\t */\n\t\targv = (char **)malloc(sizeof(*argv) * 12);\n\t\tif (argv == NULL)\n\t\t\treturn(NULL);\n\t\t*argv++ = (char *)10;\n\t\t*argv = (char *)0;\n\t}\n\tfor (cpp = argv; *cpp; cpp++)\n\t\t;\n\tif (cpp == &argv[(long)argv[-1]]) {\n\t\t--argv;\n\t\t*argv = (char *)((long)(*argv) + 10);\n\t\targv = (char **)realloc(argv, sizeof(*argv)*((long)(*argv) + 2));\n\t\tif (argv == NULL)\n\t\t\treturn(NULL);\n\t\targv++;\n\t\tcpp = &argv[(long)argv[-1] - 10];\n\t}\n\t*cpp++ = strdup(val);\n\t*cpp = 0;\n\treturn(argv);\n}"
+  },
+  "after_code": {
+    "contrib/telnet/telnetd/sys_term.c::addarg": "static char **\naddarg(char **argv, const char *val)\n{\n\tchar **cpp;\n\n\tif (argv == NULL) {\n\t\t/*\n\t\t * 10 entries, a leading length, and a null\n\t\t */\n\t\targv = (char **)malloc(sizeof(*argv) * 12);\n\t\tif (argv == NULL)\n\t\t\tfatal(net, \"failure allocating argument space\");\n\t\t*argv++ = (char *)10;\n\t\t*argv = (char *)0;\n\t}\n\tfor (cpp = argv; *cpp; cpp++)\n\t\t;\n\tif (cpp == &argv[(long)argv[-1]]) {\n\t\t--argv;\n\t\t*argv = (char *)((long)(*argv) + 10);\n\t\targv = (char **)realloc(argv, sizeof(*argv)*((long)(*argv) + 2));\n\t\tif (argv == NULL)\n\t\t\tfatal(net, \"failure allocating argument space\");\n\t\targv++;\n\t\tcpp = &argv[(long)argv[-1] - 10];\n\t}\n\tif ((*cpp++ = strdup(val)) == NULL)\n\t\tfatal(net, \"failure allocating argument space\");\n\t*cpp = 0;\n\treturn(argv);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

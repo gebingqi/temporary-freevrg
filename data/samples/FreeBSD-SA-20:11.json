@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-20:11",
+  "cve": [
+    "CVE-2020-1967"
+  ],
+  "subsystem": "openssl",
+  "cwe": [],
+  "affected_versions": [
+    "FreeBSD 12.1"
+  ],
+  "fix_commits": [
+    "9c325392eae38dcb0dea8c9bfa680fc1c945fa59"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nFreeBSD includes software from the OpenSSL Project.  The OpenSSL Project is a\ncollaborative effort to develop a robust, commercial-grade, full-featured\nOpen Source toolkit for the Transport Layer Security (TLS) and Secure Sockets\nLayer (SSL) protocols.  It is also a full-strength general purpose\ncryptography library.\n\nProblem Description:\nServer or client applications that call the SSL_check_chain() function during\nor after a TLS 1.3 handshake may crash due to a NULL pointer dereference as a\nresult of incorrect handling of the \"signature_algorithms_cert\" TLS\nextension.  The crash occurs if an invalid or unrecognized signature\nalgorithm is received from the peer.\n\nImpact:\nA malicious peer could exploit the NULL pointer dereference crash, causing a\ndenial of service attack.\n\nWorkaround:\nNo workaround is available.",
+  "files_changed": [
+    "crypto/openssl/ssl/t1_lib.c"
+  ],
+  "diff": "### commit 9c325392eae38dcb0dea8c9bfa680fc1c945fa59\ndiff --git a/crypto/openssl/ssl/t1_lib.c b/crypto/openssl/ssl/t1_lib.c\nindex a254fd5a055913..76b4baa38893f8 100644\n--- a/crypto/openssl/ssl/t1_lib.c\n+++ b/crypto/openssl/ssl/t1_lib.c\n@@ -2130,7 +2130,7 @@ static int tls1_check_sig_alg(SSL *s, X509 *x, int default_nid)\n         sigalg = use_pc_sigalgs\n                  ? tls1_lookup_sigalg(s->s3->tmp.peer_cert_sigalgs[i])\n                  : s->shared_sigalgs[i];\n-        if (sig_nid == sigalg->sigandhash)\n+        if (sigalg != NULL && sig_nid == sigalg->sigandhash)\n             return 1;\n     }\n     return 0;\n",
+  "extractable": true,
+  "before_code": {
+    "crypto/openssl/ssl/t1_lib.c::tls1_check_sig_alg": "static int tls1_check_sig_alg(SSL *s, X509 *x, int default_nid)\n{\n    int sig_nid, use_pc_sigalgs = 0;\n    size_t i;\n    const SIGALG_LOOKUP *sigalg;\n    size_t sigalgslen;\n    if (default_nid == -1)\n        return 1;\n    sig_nid = X509_get_signature_nid(x);\n    if (default_nid)\n        return sig_nid == default_nid ? 1 : 0;\n\n    if (SSL_IS_TLS13(s) && s->s3->tmp.peer_cert_sigalgs != NULL) {\n        /*\n         * If we're in TLSv1.3 then we only get here if we're checking the\n         * chain. If the peer has specified peer_cert_sigalgs then we use them\n         * otherwise we default to normal sigalgs.\n         */\n        sigalgslen = s->s3->tmp.peer_cert_sigalgslen;\n        use_pc_sigalgs = 1;\n    } else {\n        sigalgslen = s->shared_sigalgslen;\n    }\n    for (i = 0; i < sigalgslen; i++) {\n        sigalg = use_pc_sigalgs\n                 ? tls1_lookup_sigalg(s->s3->tmp.peer_cert_sigalgs[i])\n                 : s->shared_sigalgs[i];\n        if (sig_nid == sigalg->sigandhash)\n            return 1;\n    }\n    return 0;\n}"
+  },
+  "after_code": {
+    "crypto/openssl/ssl/t1_lib.c::tls1_check_sig_alg": "static int tls1_check_sig_alg(SSL *s, X509 *x, int default_nid)\n{\n    int sig_nid, use_pc_sigalgs = 0;\n    size_t i;\n    const SIGALG_LOOKUP *sigalg;\n    size_t sigalgslen;\n    if (default_nid == -1)\n        return 1;\n    sig_nid = X509_get_signature_nid(x);\n    if (default_nid)\n        return sig_nid == default_nid ? 1 : 0;\n\n    if (SSL_IS_TLS13(s) && s->s3->tmp.peer_cert_sigalgs != NULL) {\n        /*\n         * If we're in TLSv1.3 then we only get here if we're checking the\n         * chain. If the peer has specified peer_cert_sigalgs then we use them\n         * otherwise we default to normal sigalgs.\n         */\n        sigalgslen = s->s3->tmp.peer_cert_sigalgslen;\n        use_pc_sigalgs = 1;\n    } else {\n        sigalgslen = s->shared_sigalgslen;\n    }\n    for (i = 0; i < sigalgslen; i++) {\n        sigalg = use_pc_sigalgs\n                 ? tls1_lookup_sigalg(s->s3->tmp.peer_cert_sigalgs[i])\n                 : s->shared_sigalgs[i];\n        if (sigalg != NULL && sig_nid == sigalg->sigandhash)\n            return 1;\n    }\n    return 0;\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

@@ -1,0 +1,52 @@
+[project]
+name = "freevrg"
+version = "0.1.0"
+description = "Prototype pipeline for turning historical FreeBSD vulnerabilities into reusable CodeQL rules."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { file = "LICENSE" }
+authors = [
+  { name = "FreeVRG Contributors" }
+]
+dependencies = [
+  "langgraph>=0.2.56,<1.0.0",
+  "langchain-core>=0.3.0,<1.0.0",
+  "langchain-openai>=0.2.0,<1.0.0",
+  "langfuse>=2.57.0,<3.0.0",
+  "pydantic-settings>=2.6.0,<3.0.0",
+  "python-dotenv>=1.0.1,<2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0,<9.0.0",
+  "ruff>=0.6.0,<1.0.0",
+]
+
+[project.scripts]
+freevrg = "main:main"
+
+[build-system]
+requires = ["pdm-backend>=2.4.0,<3.0.0"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = false
+
+[tool.pdm.dev-dependencies]
+dev = [
+  "pytest>=8.3.0,<9.0.0",
+  "ruff>=0.6.0,<1.0.0",
+]
+
+[tool.pdm.scripts]
+start = "python main.py"
+lint = "ruff check ."
+test = "pytest"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,27 @@
+{
+  "id": "FreeBSD-SA-26:23",
+  "cve": [
+    "CVE-2026-45255"
+  ],
+  "subsystem": "bsdinstall",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "0f15f5359041ac50090606082a9c46d913ce7d0f"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nbsdinstall and bsdconfig are utilities that provide an interactive\nconfiguration mechanism for FreeBSD.  Among other functionality, they can be\nused to configure FreeBSD to automatically join a Wi-Fi network.\n\nProblem Description:\nWhen bsdinstall or bsdconfig are prompted to scan for nearby Wi-Fi networks,\nthey build up a list of network names and use bsddialog(1) to prompt the user\nto select a network.  This is implemented using a shell script, and the code\nwhich handled network names was not careful to prevent expansion by the\nshell.  As a result, a suitably crafted network name can be used to execute\ncommands via a subshell.\n\nImpact:\nThe problem can be exploited to execute code as root on the system running\nbsdinstall or bsdconfig.  The attacker would need to create an access point\nwith a specially crafted name and be within range of a Wi-Fi scan.  Note that\nbsdinstall and bsdconfig are vulnerable as soon as the user prompts them to\nscan for nearby networks; they do not need to actually select the malicious\nnetwork.\n\nWorkaround:\nAvoid using bsdinstall or bsdconfig to scan for Wi-Fi networks, and instead\nconfigure Wi-Fi manually.",
+  "files_changed": [
+    "usr.sbin/bsdinstall/scripts/wlanconfig"
+  ],
+  "diff": "### commit 0f15f5359041ac50090606082a9c46d913ce7d0f\ndiff --git a/usr.sbin/bsdinstall/scripts/wlanconfig b/usr.sbin/bsdinstall/scripts/wlanconfig\nindex 33d94a933f4525..aababf76c26602 100755\n--- a/usr.sbin/bsdinstall/scripts/wlanconfig\n+++ b/usr.sbin/bsdinstall/scripts/wlanconfig\n@@ -147,6 +147,34 @@ dialog_country_select()\n \tcountry_set \"$regdomain\" \"$country\"\n }\n \n+dialog_network_select()\n+{\n+\tlocal ssid flags height width rows prompt\n+\n+\t# Avoid using eval on untrusted data.\n+\tset --\n+\twhile IFS=$'\\t' read -r ssid flags; do\n+\t\t[ -n \"$ssid\" ] || continue\n+\t\tset -- \"$@\" \"$ssid\" \"$flags\"\n+\tdone <<EOF\n+$NETWORKS\n+EOF\n+\n+\tf_dialog_title \"Network Selection\"\n+\tprompt=\"Select a wireless network to connect to.\"\n+\tf_dialog_menu_size height width rows \\\n+\t\t\"$DIALOG_TITLE\" \"$DIALOG_BACKTITLE\" \"$prompt\" \"\" \"$@\"\n+\t$DIALOG \\\n+\t\t--title \"$DIALOG_TITLE\"         \\\n+\t\t--backtitle \"$DIALOG_BACKTITLE\" \\\n+\t\t--extra-button                  \\\n+\t\t--extra-label \"Rescan\"          \\\n+\t\t--menu \"$prompt\"                \\\n+\t\t$height $width $rows            \\\n+\t\t\"$@\"                            \\\n+\t\t2>&1 >&$DIALOG_TERMINAL_PASSTHRU_FD\n+}\n+\n ############################################################ MAIN\n \n : > \"$BSDINSTALL_TMPETC/wpa_supplicant.conf\"\n@@ -213,27 +241,14 @@ while :; do\n \n \tf_eval_catch -dk SCAN_RESULTS wlanconfig wpa_cli \"wpa_cli scan_results\"\n \tNETWORKS=$( echo \"$SCAN_RESULTS\" | awk -F '\\t' '\n-\t\t/..:..:..:..:..:../ && $5 { printf \"\\\"%s\\\"\\t\\\"%s\\\"\\n\", $5, $4 }\n+\t\t/..:..:..:..:..:../ && $5 { print $5 \"\\t\" $4 }\n \t' | sort | uniq )\n \n \tif [ ! \"$NETWORKS\" ]; then\n \t\tf_dialog_title \"$msg_error\"\n \t\tf_yesno \"No wireless networks were found. Rescan?\" && continue\n \telse\n-\t\tf_dialog_title \"Network Selection\"\n-\t\tprompt=\"Select a wireless network to connect to.\"\n-\t\tf_dialog_menu_size height width rows \"$DIALOG_TITLE\" \\\n-\t\t\t\"$DIALOG_BACKTITLE\" \"$prompt\" \"\" $NETWORKS\n-\t\tNETWORK=$( eval $DIALOG \\\n-\t\t\t--title \\\"\\$DIALOG_TITLE\\\"         \\\n-\t\t\t--backtitle \\\"\\$DIALOG_BACKTITLE\\\" \\\n-\t\t\t--extra-button                     \\\n-\t\t\t--extra-label \\\"Rescan\\\"           \\\n-\t\t\t--menu \\\"\\$prompt\\\"                \\\n-\t\t\t$height $width $rows               \\\n-\t\t\t$NETWORKS                          \\\n-\t\t\t2>&1 >&$DIALOG_TERMINAL_PASSTHRU_FD\n-\t\t)\n+\t\tNETWORK=$( dialog_network_select )\n \tfi\n \tretval=$?\n \tf_dialog_data_sanitize NETWORK\n@@ -270,7 +285,7 @@ while :; do\n done\n \n [ \"$ENCRYPTION\" ] || ENCRYPTION=$( echo \"$NETWORKS\" |\n-\tawk -F '\\t' \"/^\\\"$NETWORK\\\"\\t/ { print \\$2 }\" )\n+\tawk -F '\\t' \"/^$NETWORK\\t/ { print \\$2 }\" )\n \n if echo \"$ENCRYPTION\" | grep -q PSK; then\n \tPASS=$( $DIALOG \\\n",
+  "extractable": false,
+  "before_code": {},
+  "after_code": {},
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

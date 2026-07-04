@@ -1,0 +1,36 @@
+{
+  "id": "FreeBSD-SA-24:08",
+  "cve": [
+    "CVE-2024-7589",
+    "CVE-2024-6387",
+    "CVE-2006-5051"
+  ],
+  "subsystem": "openssh",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "2abea9df01655633aabbb9bf3204c90722001202"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nOpenSSH is an implementation of the SSH protocol suite, providing an\nencrypted and authenticated transport for a variety of services, including\nremote shell access.\n\nProblem Description:\nA signal handler in sshd(8) may call a logging function that is not async-\nsignal-safe.  The signal handler is invoked when a client does not\nauthenticate within the LoginGraceTime seconds (120 by default).  This signal\nhandler executes in the context of the sshd(8)'s privileged code, which is\nnot sandboxed and runs with full root privileges.\n\nThis issue is another instance of the problem in CVE-2024-6387 addressed by\nFreeBSD-SA-24:04.openssh.  The faulty code in this case is from the\nintegration of blacklistd in OpenSSH in FreeBSD.\n\nImpact:\nAs a result of calling functions that are not async-signal-safe in the\nprivileged sshd(8) context, a race condition exists that a determined\nattacker may be able to exploit to allow an unauthenticated remote code\nexecution as root.\n\nWorkaround:\nIf sshd(8) cannot be updated, this signal handler race condition can be\nmitigated by setting LoginGraceTime to 0 in /etc/ssh/sshd_config and\nrestarting sshd(8).  This makes sshd(8) vulnerable to a denial of service\n(the exhaustion of all MaxStartups connections), but makes it safe from the\nremote code execution presented in this advisory.",
+  "files_changed": [
+    "crypto/openssh/log.c",
+    "crypto/openssh/version.h"
+  ],
+  "diff": "### commit 2abea9df01655633aabbb9bf3204c90722001202\ndiff --git a/crypto/openssh/log.c b/crypto/openssh/log.c\nindex 9fc1a2e2eaf632..436c7563018189 100644\n--- a/crypto/openssh/log.c\n+++ b/crypto/openssh/log.c\n@@ -451,12 +451,14 @@ void\n sshsigdie(const char *file, const char *func, int line, int showfunc,\n     LogLevel level, const char *suffix, const char *fmt, ...)\n {\n+#if 0\n \tva_list args;\n \n \tva_start(args, fmt);\n \tsshlogv(file, func, line, showfunc, SYSLOG_LEVEL_FATAL,\n \t    suffix, fmt, args);\n \tva_end(args);\n+#endif\n \t_exit(1);\n }\n \ndiff --git a/crypto/openssh/version.h b/crypto/openssh/version.h\nindex cfbb749c0d04f1..836b5650b247cb 100644\n--- a/crypto/openssh/version.h\n+++ b/crypto/openssh/version.h\n@@ -5,4 +5,4 @@\n #define SSH_PORTABLE\t\"p1\"\n #define SSH_RELEASE\tSSH_VERSION SSH_PORTABLE\n \n-#define SSH_VERSION_FREEBSD\t\"FreeBSD-20240318\"\n+#define SSH_VERSION_FREEBSD\t\"FreeBSD-20240701\"\n",
+  "extractable": true,
+  "before_code": {
+    "crypto/openssh/log.c::sshsigdie": "void\nsshsigdie(const char *file, const char *func, int line, int showfunc,\n    LogLevel level, const char *suffix, const char *fmt, ...)\n{\n\tva_list args;\n\n\tva_start(args, fmt);\n\tsshlogv(file, func, line, showfunc, SYSLOG_LEVEL_FATAL,\n\t    suffix, fmt, args);\n\tva_end(args);\n\t_exit(1);\n}",
+    "crypto/openssh/version.h::<top-level>": "/* L5 */ #define SSH_PORTABLE\t\"p1\"\n/* L6 */ #define SSH_RELEASE\tSSH_VERSION SSH_PORTABLE\n/* L7 */ \n/* L8 */ #define SSH_VERSION_FREEBSD\t\"FreeBSD-20240318\""
+  },
+  "after_code": {
+    "crypto/openssh/log.c::sshsigdie": "void\nsshsigdie(const char *file, const char *func, int line, int showfunc,\n    LogLevel level, const char *suffix, const char *fmt, ...)\n{\n#if 0\n\tva_list args;\n\n\tva_start(args, fmt);\n\tsshlogv(file, func, line, showfunc, SYSLOG_LEVEL_FATAL,\n\t    suffix, fmt, args);\n\tva_end(args);\n#endif\n\t_exit(1);\n}",
+    "crypto/openssh/version.h::<top-level>": "/* L5 */ #define SSH_PORTABLE\t\"p1\"\n/* L6 */ #define SSH_RELEASE\tSSH_VERSION SSH_PORTABLE\n/* L7 */ \n/* L8 */ #define SSH_VERSION_FREEBSD\t\"FreeBSD-20240701\""
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

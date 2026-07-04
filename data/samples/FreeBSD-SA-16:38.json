@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-16:38",
+  "cve": [
+    "CVE-2016-1889"
+  ],
+  "subsystem": "bhyve",
+  "cwe": [],
+  "affected_versions": [
+    "FreeBSD 10.x, FreeBSD 11.0"
+  ],
+  "fix_commits": [
+    "186c15aa09b47de103d8cea9ef2a2b1b426ea99d"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nbhyve(8) is a hypervisor that supports running a variety of virtual\nmachines (guests).\n\nProblem Description:\nThe bounds checking of accesses to guest memory greater than 4GB by\ndevice emulations is subject to integer overflow.\n\nImpact:\nFor a bhyve virtual machine with more than 3GB of guest memory configured,\na malicious guest could craft device descriptors that could give it access\nto the heap of the bhyve process.  Since the bhyve process is running as root,\nthis may allow guests to obtain full control of the hosts they're running on.\n\nWorkaround:\nNo workaround is available, however, systems not using bhyve(8) for\nvirtualization are not vulnerable. Additionally, systems using bhyve(8) with\n3GB or less of configured guest memory are not vulnerable.",
+  "files_changed": [
+    "lib/libvmmapi/vmmapi.c"
+  ],
+  "diff": "### commit 186c15aa09b47de103d8cea9ef2a2b1b426ea99d\ndiff --git a/lib/libvmmapi/vmmapi.c b/lib/libvmmapi/vmmapi.c\nindex 3a6f210e805dac..8a4e3aec104683 100644\n--- a/lib/libvmmapi/vmmapi.c\n+++ b/lib/libvmmapi/vmmapi.c\n@@ -426,13 +426,18 @@ vm_map_gpa(struct vmctx *ctx, vm_paddr_t gaddr, size_t len)\n {\n \n \tif (ctx->lowmem > 0) {\n-\t\tif (gaddr < ctx->lowmem && gaddr + len <= ctx->lowmem)\n+\t\tif (gaddr < ctx->lowmem && len <= ctx->lowmem &&\n+\t\t    gaddr + len <= ctx->lowmem)\n \t\t\treturn (ctx->baseaddr + gaddr);\n \t}\n \n \tif (ctx->highmem > 0) {\n-\t\tif (gaddr >= 4*GB && gaddr + len <= 4*GB + ctx->highmem)\n-\t\t\treturn (ctx->baseaddr + gaddr);\n+                if (gaddr >= 4*GB) {\n+\t\t\tif (gaddr < 4*GB + ctx->highmem &&\n+\t\t\t    len <= ctx->highmem &&\n+\t\t\t    gaddr + len <= 4*GB + ctx->highmem)\n+\t\t\t\treturn (ctx->baseaddr + gaddr);\n+\t\t}\n \t}\n \n \treturn (NULL);\n",
+  "extractable": true,
+  "before_code": {
+    "lib/libvmmapi/vmmapi.c::vm_map_gpa": "void *\nvm_map_gpa(struct vmctx *ctx, vm_paddr_t gaddr, size_t len)\n{\n\n\tif (ctx->lowmem > 0) {\n\t\tif (gaddr < ctx->lowmem && gaddr + len <= ctx->lowmem)\n\t\t\treturn (ctx->baseaddr + gaddr);\n\t}\n\n\tif (ctx->highmem > 0) {\n\t\tif (gaddr >= 4*GB && gaddr + len <= 4*GB + ctx->highmem)\n\t\t\treturn (ctx->baseaddr + gaddr);\n\t}\n\n\treturn (NULL);\n}"
+  },
+  "after_code": {
+    "lib/libvmmapi/vmmapi.c::vm_map_gpa": "void *\nvm_map_gpa(struct vmctx *ctx, vm_paddr_t gaddr, size_t len)\n{\n\n\tif (ctx->lowmem > 0) {\n\t\tif (gaddr < ctx->lowmem && len <= ctx->lowmem &&\n\t\t    gaddr + len <= ctx->lowmem)\n\t\t\treturn (ctx->baseaddr + gaddr);\n\t}\n\n\tif (ctx->highmem > 0) {\n                if (gaddr >= 4*GB) {\n\t\t\tif (gaddr < 4*GB + ctx->highmem &&\n\t\t\t    len <= ctx->highmem &&\n\t\t\t    gaddr + len <= 4*GB + ctx->highmem)\n\t\t\t\treturn (ctx->baseaddr + gaddr);\n\t\t}\n\t}\n\n\treturn (NULL);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

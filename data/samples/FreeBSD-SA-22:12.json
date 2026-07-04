@@ -1,0 +1,33 @@
+{
+  "id": "FreeBSD-SA-22:12",
+  "cve": [
+    "CVE-2022-23092"
+  ],
+  "subsystem": "lib9p",
+  "cwe": [],
+  "affected_versions": [
+    "FreeBSD 13.0 and 13.1"
+  ],
+  "fix_commits": [
+    "c536045c51da78a85138e963d3b7e13a547713c9",
+    "7dfe949791e764115dda17ec6b21fba2e0a86a2e",
+    "70a2cf7bb2e0010805dde782ce7a1fe325d6f7e2"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nlib9p provides an implementation of the 9p file system protocol.  It is\nused by bhyve(8) to provide guest access to a host file system tree via\nthe virtio-9p device model.  The FreeBSD base system does not contain\nany other users of lib9p.\n\nProblem Description:\nThe implementation of lib9p's handling of RWALK messages was missing a\nbounds check needed when unpacking the message contents.  The missing\ncheck means that the receipt of a specially crafted message will cause\nlib9p to overwrite unrelated memory.\n\nImpact:\nThe bug can be triggered by a malicious bhyve guest kernel to overwrite\nmemory in the bhyve(8) process.  This could potentially lead to\nuser-mode code execution on the host, subject to bhyve's Capsicum\nsandbox.\n\nWorkaround:\nNo workaround is available.  Systems not using bhyve's virtio-9p device\nmodel are not affected.",
+  "files_changed": [
+    "contrib/lib9p/pack.c"
+  ],
+  "diff": "### commit c536045c51da78a85138e963d3b7e13a547713c9\ndiff --git a/contrib/lib9p/pack.c b/contrib/lib9p/pack.c\nindex 88f0ccb4ad73d4..cf0ae9111b7644 100644\n--- a/contrib/lib9p/pack.c\n+++ b/contrib/lib9p/pack.c\n@@ -343,13 +343,17 @@ l9p_puqids(struct l9p_message *msg, uint16_t *num, struct l9p_qid *qids)\n \tssize_t ret, r;\n \n \tr = l9p_pu16(msg, num);\n-\tif (r > 0) {\n-\t\tfor (i = 0, lim = *num; i < lim; i++) {\n-\t\t\tret = l9p_puqid(msg, &qids[i]);\n-\t\t\tif (ret < 0)\n-\t\t\t\treturn (-1);\n-\t\t\tr += ret;\n-\t\t}\n+\tif (r <= 0)\n+\t\treturn (r);\n+\n+\tif (*num > L9P_MAX_WELEM)\n+\t\treturn (-1);\n+\n+\tfor (i = 0, lim = *num; i < lim; i++) {\n+\t\tret = l9p_puqid(msg, &qids[i]);\n+\t\tif (ret < 0)\n+\t\t\treturn (-1);\n+\t\tr += ret;\n \t}\n \treturn (r);\n }\n\n\n### commit 7dfe949791e764115dda17ec6b21fba2e0a86a2e\ndiff --git a/contrib/lib9p/pack.c b/contrib/lib9p/pack.c\nindex 88f0ccb4ad73d4..cf0ae9111b7644 100644\n--- a/contrib/lib9p/pack.c\n+++ b/contrib/lib9p/pack.c\n@@ -343,13 +343,17 @@ l9p_puqids(struct l9p_message *msg, uint16_t *num, struct l9p_qid *qids)\n \tssize_t ret, r;\n \n \tr = l9p_pu16(msg, num);\n-\tif (r > 0) {\n-\t\tfor (i = 0, lim = *num; i < lim; i++) {\n-\t\t\tret = l9p_puqid(msg, &qids[i]);\n-\t\t\tif (ret < 0)\n-\t\t\t\treturn (-1);\n-\t\t\tr += ret;\n-\t\t}\n+\tif (r <= 0)\n+\t\treturn (r);\n+\n+\tif (*num > L9P_MAX_WELEM)\n+\t\treturn (-1);\n+\n+\tfor (i = 0, lim = *num; i < lim; i++) {\n+\t\tret = l9p_puqid(msg, &qids[i]);\n+\t\tif (ret < 0)\n+\t\t\treturn (-1);\n+\t\tr += ret;\n \t}\n \treturn (r);\n }\n\n\n### commit 70a2cf7bb2e0010805dde782ce7a1fe325d6f7e2\ndiff --git a/contrib/lib9p/pack.c b/contrib/lib9p/pack.c\nindex 88f0ccb4ad73d4..cf0ae9111b7644 100644\n--- a/contrib/lib9p/pack.c\n+++ b/contrib/lib9p/pack.c\n@@ -343,13 +343,17 @@ l9p_puqids(struct l9p_message *msg, uint16_t *num, struct l9p_qid *qids)\n \tssize_t ret, r;\n \n \tr = l9p_pu16(msg, num);\n-\tif (r > 0) {\n-\t\tfor (i = 0, lim = *num; i < lim; i++) {\n-\t\t\tret = l9p_puqid(msg, &qids[i]);\n-\t\t\tif (ret < 0)\n-\t\t\t\treturn (-1);\n-\t\t\tr += ret;\n-\t\t}\n+\tif (r <= 0)\n+\t\treturn (r);\n+\n+\tif (*num > L9P_MAX_WELEM)\n+\t\treturn (-1);\n+\n+\tfor (i = 0, lim = *num; i < lim; i++) {\n+\t\tret = l9p_puqid(msg, &qids[i]);\n+\t\tif (ret < 0)\n+\t\t\treturn (-1);\n+\t\tr += ret;\n \t}\n \treturn (r);\n }\n",
+  "extractable": true,
+  "before_code": {
+    "contrib/lib9p/pack.c::l9p_puqids": "static ssize_t\nl9p_puqids(struct l9p_message *msg, uint16_t *num, struct l9p_qid *qids)\n{\n\tsize_t i, lim;\n\tssize_t ret, r;\n\n\tr = l9p_pu16(msg, num);\n\tif (r > 0) {\n\t\tfor (i = 0, lim = *num; i < lim; i++) {\n\t\t\tret = l9p_puqid(msg, &qids[i]);\n\t\t\tif (ret < 0)\n\t\t\t\treturn (-1);\n\t\t\tr += ret;\n\t\t}\n\t}\n\treturn (r);\n}"
+  },
+  "after_code": {
+    "contrib/lib9p/pack.c::l9p_puqids": "static ssize_t\nl9p_puqids(struct l9p_message *msg, uint16_t *num, struct l9p_qid *qids)\n{\n\tsize_t i, lim;\n\tssize_t ret, r;\n\n\tr = l9p_pu16(msg, num);\n\tif (r <= 0)\n\t\treturn (r);\n\n\tif (*num > L9P_MAX_WELEM)\n\t\treturn (-1);\n\n\tfor (i = 0, lim = *num; i < lim; i++) {\n\t\tret = l9p_puqid(msg, &qids[i]);\n\t\tif (ret < 0)\n\t\t\treturn (-1);\n\t\tr += ret;\n\t}\n\treturn (r);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

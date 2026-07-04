@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-19:20",
+  "cve": [
+    "CVE-2019-5610"
+  ],
+  "subsystem": "bsnmp",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "e7c851e54a630edd8ef97e68392a49eaae73fccf"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nThe bsnmp software library is used for the Internet SNMP (Simple Network\nManagement Protocol).  As part of this it includes functions to handle ASN.1\n(Abstract Syntax Notation One).\n\nProblem Description:\nA function extracting the length from type-length-value encoding is not\nproperly validating the submitted length.\n\nImpact:\nA remote user could cause, for example, an out-of-bounds read, decoding of\nunrelated data, or trigger a crash of the software such as bsnmpd resulting\nin a denial of service.\n\nWorkaround:\nNo workaround is available.",
+  "files_changed": [
+    "contrib/bsnmp/lib/asn1.c"
+  ],
+  "diff": "### commit e7c851e54a630edd8ef97e68392a49eaae73fccf\ndiff --git a/contrib/bsnmp/lib/asn1.c b/contrib/bsnmp/lib/asn1.c\nindex 03b5662ed22c3e..c96ea8c84ff6a8 100644\n--- a/contrib/bsnmp/lib/asn1.c\n+++ b/contrib/bsnmp/lib/asn1.c\n@@ -100,6 +100,11 @@ asn_get_header(struct asn_buf *b, u_char *type, asn_len_t *len)\n \t\t*len = *b->asn_cptr++;\n \t\tb->asn_len--;\n \t}\n+\tif (*len > b->asn_len) {\n+\t\tasn_error(b, \"len %u exceeding asn_len %u\", *len, b->asn_len);\n+\t\treturn (ASN_ERR_EOBUF);\n+\t}\n+\t\n \treturn (ASN_ERR_OK);\n }\n \n",
+  "extractable": true,
+  "before_code": {
+    "contrib/bsnmp/lib/asn1.c::asn_get_header": "enum asn_err\nasn_get_header(struct asn_buf *b, u_char *type, asn_len_t *len)\n{\n\tu_int length;\n\n\tif (b->asn_len == 0) {\n\t\tasn_error(b, \"no identifier for header\");\n\t\treturn (ASN_ERR_EOBUF);\n\t}\n\t*type = *b->asn_cptr;\n\tif ((*type & ASN_TYPE_MASK) > 0x30) {\n\t\tasn_error(b, \"types > 0x30 not supported (%u)\",\n\t\t    *type & ASN_TYPE_MASK);\n\t\treturn (ASN_ERR_FAILED);\n\t}\n\tb->asn_cptr++;\n\tb->asn_len--;\n\tif (b->asn_len == 0) {\n\t\tasn_error(b, \"no length field\");\n\t\treturn (ASN_ERR_EOBUF);\n\t}\n\tif (*b->asn_cptr & 0x80) {\n\t\tlength = *b->asn_cptr++ & 0x7f;\n\t\tb->asn_len--;\n\t\tif (length == 0) {\n\t\t\tasn_error(b, \"indefinite length not supported\");\n\t\t\treturn (ASN_ERR_FAILED);\n\t\t}\n\t\tif (length > ASN_MAXLENLEN) {\n\t\t\tasn_error(b, \"long length too long (%u)\", length);\n\t\t\treturn (ASN_ERR_FAILED);\n\t\t}\n\t\tif (length > b->asn_len) {\n\t\t\tasn_error(b, \"long length truncated\");\n\t\t\treturn (ASN_ERR_EOBUF);\n\t\t}\n\t\t*len = 0;\n\t\twhile (length--) {\n\t\t\t*len = (*len << 8) | *b->asn_cptr++;\n\t\t\tb->asn_len--;\n\t\t}\n\t} else {\n\t\t*len = *b->asn_cptr++;\n\t\tb->asn_len--;\n\t}\n\treturn (ASN_ERR_OK);\n}"
+  },
+  "after_code": {
+    "contrib/bsnmp/lib/asn1.c::asn_get_header": "enum asn_err\nasn_get_header(struct asn_buf *b, u_char *type, asn_len_t *len)\n{\n\tu_int length;\n\n\tif (b->asn_len == 0) {\n\t\tasn_error(b, \"no identifier for header\");\n\t\treturn (ASN_ERR_EOBUF);\n\t}\n\t*type = *b->asn_cptr;\n\tif ((*type & ASN_TYPE_MASK) > 0x30) {\n\t\tasn_error(b, \"types > 0x30 not supported (%u)\",\n\t\t    *type & ASN_TYPE_MASK);\n\t\treturn (ASN_ERR_FAILED);\n\t}\n\tb->asn_cptr++;\n\tb->asn_len--;\n\tif (b->asn_len == 0) {\n\t\tasn_error(b, \"no length field\");\n\t\treturn (ASN_ERR_EOBUF);\n\t}\n\tif (*b->asn_cptr & 0x80) {\n\t\tlength = *b->asn_cptr++ & 0x7f;\n\t\tb->asn_len--;\n\t\tif (length == 0) {\n\t\t\tasn_error(b, \"indefinite length not supported\");\n\t\t\treturn (ASN_ERR_FAILED);\n\t\t}\n\t\tif (length > ASN_MAXLENLEN) {\n\t\t\tasn_error(b, \"long length too long (%u)\", length);\n\t\t\treturn (ASN_ERR_FAILED);\n\t\t}\n\t\tif (length > b->asn_len) {\n\t\t\tasn_error(b, \"long length truncated\");\n\t\t\treturn (ASN_ERR_EOBUF);\n\t\t}\n\t\t*len = 0;\n\t\twhile (length--) {\n\t\t\t*len = (*len << 8) | *b->asn_cptr++;\n\t\t\tb->asn_len--;\n\t\t}\n\t} else {\n\t\t*len = *b->asn_cptr++;\n\t\tb->asn_len--;\n\t}\n\tif (*len > b->asn_len) {\n\t\tasn_error(b, \"len %u exceeding asn_len %u\", *len, b->asn_len);\n\t\treturn (ASN_ERR_EOBUF);\n\t}\n\t\n\treturn (ASN_ERR_OK);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

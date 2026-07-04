@@ -1,0 +1,33 @@
+{
+  "id": "FreeBSD-SA-22:08",
+  "cve": [
+    "CVE-2018-25032"
+  ],
+  "subsystem": "zlib",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "c4727a47f18cb54ebbab951157e57b019db09fc0",
+    "f5196112e8bd53b7705f4f3d926c85f6ed5e09c4",
+    "9854ff0880022ebc0bd955a57bc1322228790f99"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nzlib is a compression library used by numerous applications, as well as some\nFreeBSD kernel components, to provide data compression/decompression\nroutines.\n\nProblem Description:\nCertain inputs can cause zlib's compression routine to overwrite an internal\nbuffer with compressed data.  This issue may require the use of uncommon or\nnon-default compression parameters.\n\nImpact:\nThe out-of-bounds write may result in memory corruption and an application\ncrash or kernel panic.\n\nWorkaround:\nNo workaround is available.",
+  "files_changed": [
+    "sys/contrib/zlib/deflate.c"
+  ],
+  "diff": "### commit c4727a47f18cb54ebbab951157e57b019db09fc0\ndiff --git a/lib/libz/Symbol.map b/lib/libz/Symbol.map\nindex 9e38aee72ed245..2cc2c76787ba96 100644\n--- a/lib/libz/Symbol.map\n+++ b/lib/libz/Symbol.map\n@@ -113,17 +113,3 @@ FBSD_1.6 {\n \tzdopen;\n };\n \n-ZLIBprivate_1.0 {\n-\t_tr_align;\n-\t_tr_flush_block;\n-\t_tr_init;\n-\t_tr_stored_block;\n-\t_tr_tally;\n-\tgz_error;\n-\tinflate_fast;\n-\tinflate_table;\n-\tlongest_match;\n-\tmatch_init;\n-\tzcalloc;\n-\tzcfree;\n-};\ndiff --git a/lib/libz/Versions.def b/lib/libz/Versions.def\nindex 34124ad99fd7d6..0de1c90377639e 100644\n--- a/lib/libz/Versions.def\n+++ b/lib/libz/Versions.def\n@@ -21,6 +21,3 @@ FBSD_1.2 {\n FBSD_1.6 {\n } FBSD_1.2;\n \n-ZLIBprivate_1.0 {\n-} ZLIB_1.2.4.0;\n-\n\n\n### commit f5196112e8bd53b7705f4f3d926c85f6ed5e09c4\ndiff --git a/lib/libz/Symbol.map b/lib/libz/Symbol.map\nindex 9e38aee72ed245..2cc2c76787ba96 100644\n--- a/lib/libz/Symbol.map\n+++ b/lib/libz/Symbol.map\n@@ -113,17 +113,3 @@ FBSD_1.6 {\n \tzdopen;\n };\n \n-ZLIBprivate_1.0 {\n-\t_tr_align;\n-\t_tr_flush_block;\n-\t_tr_init;\n-\t_tr_stored_block;\n-\t_tr_tally;\n-\tgz_error;\n-\tinflate_fast;\n-\tinflate_table;\n-\tlongest_match;\n-\tmatch_init;\n-\tzcalloc;\n-\tzcfree;\n-};\ndiff --git a/lib/libz/Versions.def b/lib/libz/Versions.def\nindex 34124ad99fd7d6..0de1c90377639e 100644\n--- a/lib/libz/Versions.def\n+++ b/lib/libz/Versions.def\n@@ -21,6 +21,3 @@ FBSD_1.2 {\n FBSD_1.6 {\n } FBSD_1.2;\n \n-ZLIBprivate_1.0 {\n-} ZLIB_1.2.4.0;\n-\n\n\n### commit 9854ff0880022ebc0bd955a57bc1322228790f99\ndiff --git a/sys/contrib/zlib/deflate.c b/sys/contrib/zlib/deflate.c\nindex edbeec0dd09ad6..f453517668ca79 100644\n--- a/sys/contrib/zlib/deflate.c\n+++ b/sys/contrib/zlib/deflate.c\n@@ -589,7 +589,8 @@ int ZEXPORT deflatePrime (strm, bits, value)\n \n     if (deflateStateCheck(strm)) return Z_STREAM_ERROR;\n     s = strm->state;\n-    if (s->sym_buf < s->pending_out + ((Buf_size + 7) >> 3))\n+    if (bits < 0 || bits > 16 ||\n+        s->sym_buf < s->pending_out + ((Buf_size + 7) >> 3))\n         return Z_BUF_ERROR;\n     do {\n         put = Buf_size - s->bi_valid;\n",
+  "extractable": true,
+  "before_code": {
+    "sys/contrib/zlib/deflate.c::deflatePrime": "int ZEXPORT deflatePrime (strm, bits, value)\n    z_streamp strm;\n    int bits;\n    int value;\n{\n    deflate_state *s;\n    int put;\n\n    if (deflateStateCheck(strm)) return Z_STREAM_ERROR;\n    s = strm->state;\n    if (s->sym_buf < s->pending_out + ((Buf_size + 7) >> 3))\n        return Z_BUF_ERROR;\n    do {\n        put = Buf_size - s->bi_valid;\n        if (put > bits)\n            put = bits;\n        s->bi_buf |= (ush)((value & ((1 << put) - 1)) << s->bi_valid);\n        s->bi_valid += put;\n        _tr_flush_bits(s);\n        value >>= put;\n        bits -= put;\n    } while (bits);\n    return Z_OK;\n}"
+  },
+  "after_code": {
+    "sys/contrib/zlib/deflate.c::deflatePrime": "int ZEXPORT deflatePrime (strm, bits, value)\n    z_streamp strm;\n    int bits;\n    int value;\n{\n    deflate_state *s;\n    int put;\n\n    if (deflateStateCheck(strm)) return Z_STREAM_ERROR;\n    s = strm->state;\n    if (bits < 0 || bits > 16 ||\n        s->sym_buf < s->pending_out + ((Buf_size + 7) >> 3))\n        return Z_BUF_ERROR;\n    do {\n        put = Buf_size - s->bi_valid;\n        if (put > bits)\n            put = bits;\n        s->bi_buf |= (ush)((value & ((1 << put) - 1)) << s->bi_valid);\n        s->bi_valid += put;\n        _tr_flush_bits(s);\n        value >>= put;\n        bits -= put;\n    } while (bits);\n    return Z_OK;\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

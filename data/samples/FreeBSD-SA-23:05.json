@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-23:05",
+  "cve": [
+    "CVE-2023-28531"
+  ],
+  "subsystem": "openssh",
+  "cwe": [],
+  "affected_versions": [
+    "FreeBSD 12.4"
+  ],
+  "fix_commits": [
+    "e374f1ec937f70ab2c89e0b392b45a67752c4172"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nOpenSSH is an implementation of the SSH protocol suite, providing an\nencrypted and authenticated transport for a variety of services, including\nremote shell access.\n\nProblem Description:\nWhen using ssh-add(1) to add smartcard keys to ssh-agent(1) with per-hop\ndestination constraints, a logic error prevented the constraints from being\nsent to the agent resulting in keys being added to the agent without\nconstraints.\n\nImpact:\nA malicious server could leverage the keys provided by a forwarded agent that\nwould normally not be allowed due to the logic error.\n\nWorkaround:\nNo workaround is available.",
+  "files_changed": [
+    "crypto/openssh/authfd.c"
+  ],
+  "diff": "### commit e374f1ec937f70ab2c89e0b392b45a67752c4172\ndiff --git a/crypto/openssh/authfd.c b/crypto/openssh/authfd.c\nindex b633e35eaf8b87..b9ae505ad7b29e 100644\n--- a/crypto/openssh/authfd.c\n+++ b/crypto/openssh/authfd.c\n@@ -666,7 +666,7 @@ ssh_update_card(int sock, int add, const char *reader_id, const char *pin,\n     struct dest_constraint **dest_constraints, size_t ndest_constraints)\n {\n \tstruct sshbuf *msg;\n-\tint r, constrained = (life || confirm);\n+\tint r, constrained = (life || confirm || dest_constraints);\n \tu_char type;\n \n \tif (add) {\n",
+  "extractable": true,
+  "before_code": {
+    "crypto/openssh/authfd.c::ssh_update_card": "int\nssh_update_card(int sock, int add, const char *reader_id, const char *pin,\n    u_int life, u_int confirm,\n    struct dest_constraint **dest_constraints, size_t ndest_constraints)\n{\n\tstruct sshbuf *msg;\n\tint r, constrained = (life || confirm);\n\tu_char type;\n\n\tif (add) {\n\t\ttype = constrained ?\n\t\t    SSH_AGENTC_ADD_SMARTCARD_KEY_CONSTRAINED :\n\t\t    SSH_AGENTC_ADD_SMARTCARD_KEY;\n\t} else\n\t\ttype = SSH_AGENTC_REMOVE_SMARTCARD_KEY;\n\n\tif ((msg = sshbuf_new()) == NULL)\n\t\treturn SSH_ERR_ALLOC_FAIL;\n\tif ((r = sshbuf_put_u8(msg, type)) != 0 ||\n\t    (r = sshbuf_put_cstring(msg, reader_id)) != 0 ||\n\t    (r = sshbuf_put_cstring(msg, pin)) != 0)\n\t\tgoto out;\n\tif (constrained &&\n\t    (r = encode_constraints(msg, life, confirm, 0, NULL,\n\t    dest_constraints, ndest_constraints)) != 0)\n\t\tgoto out;\n\tif ((r = ssh_request_reply_decode(sock, msg)) != 0)\n\t\tgoto out;\n\t/* success */\n\tr = 0;\n out:\n\tsshbuf_free(msg);\n\treturn r;\n}"
+  },
+  "after_code": {
+    "crypto/openssh/authfd.c::ssh_update_card": "int\nssh_update_card(int sock, int add, const char *reader_id, const char *pin,\n    u_int life, u_int confirm,\n    struct dest_constraint **dest_constraints, size_t ndest_constraints)\n{\n\tstruct sshbuf *msg;\n\tint r, constrained = (life || confirm || dest_constraints);\n\tu_char type;\n\n\tif (add) {\n\t\ttype = constrained ?\n\t\t    SSH_AGENTC_ADD_SMARTCARD_KEY_CONSTRAINED :\n\t\t    SSH_AGENTC_ADD_SMARTCARD_KEY;\n\t} else\n\t\ttype = SSH_AGENTC_REMOVE_SMARTCARD_KEY;\n\n\tif ((msg = sshbuf_new()) == NULL)\n\t\treturn SSH_ERR_ALLOC_FAIL;\n\tif ((r = sshbuf_put_u8(msg, type)) != 0 ||\n\t    (r = sshbuf_put_cstring(msg, reader_id)) != 0 ||\n\t    (r = sshbuf_put_cstring(msg, pin)) != 0)\n\t\tgoto out;\n\tif (constrained &&\n\t    (r = encode_constraints(msg, life, confirm, 0, NULL,\n\t    dest_constraints, ndest_constraints)) != 0)\n\t\tgoto out;\n\tif ((r = ssh_request_reply_decode(sock, msg)) != 0)\n\t\tgoto out;\n\t/* success */\n\tr = 0;\n out:\n\tsshbuf_free(msg);\n\treturn r;\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

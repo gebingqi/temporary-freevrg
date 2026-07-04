@@ -1,0 +1,33 @@
+{
+  "id": "FreeBSD-SA-23:02",
+  "cve": [
+    "CVE-2023-25136"
+  ],
+  "subsystem": "openssh",
+  "cwe": [],
+  "affected_versions": [
+    "FreeBSD 12.4"
+  ],
+  "fix_commits": [
+    "296ec8eae0c834088a491643a937d881bfb4b5dd"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nOpenSSH is an implementation of the SSH protocol suite, providing an\nencrypted and authenticated transport for a variety of services,\nincluding remote shell access.\n\nProblem Description:\nA flaw in the backwards-compatibility key exchange route allows a pointer\nto be freed twice.\n\nImpact:\nA remote, unauthenticated attacker may be able to cause a denial of service,\nor possibly remote code execution.\n\nNote that FreeBSD 12.3 and FreeBSD 13.1 include older versions of OpenSSH,\nand are not affected.  FreeBSD 13.2-BETA1 and later include the fix.\n\nWorkaround:\nNo workaround is available.",
+  "files_changed": [
+    "crypto/openssh/compat.c"
+  ],
+  "diff": "### commit 296ec8eae0c834088a491643a937d881bfb4b5dd\ndiff --git a/crypto/openssh/compat.c b/crypto/openssh/compat.c\nindex 46dfe3a9c2e79f..478a9403eeaaeb 100644\n--- a/crypto/openssh/compat.c\n+++ b/crypto/openssh/compat.c\n@@ -1,4 +1,4 @@\n-/* $OpenBSD: compat.c,v 1.120 2022/07/01 03:35:45 dtucker Exp $ */\n+/* $OpenBSD: compat.c,v 1.121 2023/02/02 12:10:05 djm Exp $ */\n /*\n  * Copyright (c) 1999, 2000, 2001, 2002 Markus Friedl.  All rights reserved.\n  *\n@@ -190,26 +190,26 @@ compat_pkalg_proposal(struct ssh *ssh, char *pkalg_prop)\n char *\n compat_kex_proposal(struct ssh *ssh, char *p)\n {\n-\tchar *cp = NULL;\n+\tchar *cp = NULL, *cp2 = NULL;\n \n \tif ((ssh->compat & (SSH_BUG_CURVE25519PAD|SSH_OLD_DHGEX)) == 0)\n \t\treturn xstrdup(p);\n \tdebug2_f(\"original KEX proposal: %s\", p);\n \tif ((ssh->compat & SSH_BUG_CURVE25519PAD) != 0)\n-\t\tif ((p = match_filter_denylist(p,\n+\t\tif ((cp = match_filter_denylist(p,\n \t\t    \"curve25519-sha256@libssh.org\")) == NULL)\n \t\t\tfatal(\"match_filter_denylist failed\");\n \tif ((ssh->compat & SSH_OLD_DHGEX) != 0) {\n-\t\tcp = p;\n-\t\tif ((p = match_filter_denylist(p,\n+\t\tif ((cp2 = match_filter_denylist(cp ? cp : p,\n \t\t    \"diffie-hellman-group-exchange-sha256,\"\n \t\t    \"diffie-hellman-group-exchange-sha1\")) == NULL)\n \t\t\tfatal(\"match_filter_denylist failed\");\n \t\tfree(cp);\n+\t\tcp = cp2;\n \t}\n-\tdebug2_f(\"compat KEX proposal: %s\", p);\n-\tif (*p == '\\0')\n+\tif (cp == NULL || *cp == '\\0')\n \t\tfatal(\"No supported key exchange algorithms found\");\n-\treturn p;\n+\tdebug2_f(\"compat KEX proposal: %s\", cp);\n+\treturn cp;\n }\n \n",
+  "extractable": true,
+  "before_code": {
+    "crypto/openssh/compat.c::compat_kex_proposal": "char *\ncompat_kex_proposal(struct ssh *ssh, char *p)\n{\n\tchar *cp = NULL;\n\n\tif ((ssh->compat & (SSH_BUG_CURVE25519PAD|SSH_OLD_DHGEX)) == 0)\n\t\treturn xstrdup(p);\n\tdebug2_f(\"original KEX proposal: %s\", p);\n\tif ((ssh->compat & SSH_BUG_CURVE25519PAD) != 0)\n\t\tif ((p = match_filter_denylist(p,\n\t\t    \"curve25519-sha256@libssh.org\")) == NULL)\n\t\t\tfatal(\"match_filter_denylist failed\");\n\tif ((ssh->compat & SSH_OLD_DHGEX) != 0) {\n\t\tcp = p;\n\t\tif ((p = match_filter_denylist(p,\n\t\t    \"diffie-hellman-group-exchange-sha256,\"\n\t\t    \"diffie-hellman-group-exchange-sha1\")) == NULL)\n\t\t\tfatal(\"match_filter_denylist failed\");\n\t\tfree(cp);\n\t}\n\tdebug2_f(\"compat KEX proposal: %s\", p);\n\tif (*p == '\\0')\n\t\tfatal(\"No supported key exchange algorithms found\");\n\treturn p;\n}",
+    "crypto/openssh/compat.c::<top-level>": "/* L1 */ /* $OpenBSD: compat.c,v 1.120 2022/07/01 03:35:45 dtucker Exp $ */\n/* L2 */ /*\n/* L3 */  * Copyright (c) 1999, 2000, 2001, 2002 Markus Friedl.  All rights reserved.\n/* L4 */  *\n/* L215 */ "
+  },
+  "after_code": {
+    "crypto/openssh/compat.c::compat_kex_proposal": "char *\ncompat_kex_proposal(struct ssh *ssh, char *p)\n{\n\tchar *cp = NULL, *cp2 = NULL;\n\n\tif ((ssh->compat & (SSH_BUG_CURVE25519PAD|SSH_OLD_DHGEX)) == 0)\n\t\treturn xstrdup(p);\n\tdebug2_f(\"original KEX proposal: %s\", p);\n\tif ((ssh->compat & SSH_BUG_CURVE25519PAD) != 0)\n\t\tif ((cp = match_filter_denylist(p,\n\t\t    \"curve25519-sha256@libssh.org\")) == NULL)\n\t\t\tfatal(\"match_filter_denylist failed\");\n\tif ((ssh->compat & SSH_OLD_DHGEX) != 0) {\n\t\tif ((cp2 = match_filter_denylist(cp ? cp : p,\n\t\t    \"diffie-hellman-group-exchange-sha256,\"\n\t\t    \"diffie-hellman-group-exchange-sha1\")) == NULL)\n\t\t\tfatal(\"match_filter_denylist failed\");\n\t\tfree(cp);\n\t\tcp = cp2;\n\t}\n\tif (cp == NULL || *cp == '\\0')\n\t\tfatal(\"No supported key exchange algorithms found\");\n\tdebug2_f(\"compat KEX proposal: %s\", cp);\n\treturn cp;\n}",
+    "crypto/openssh/compat.c::<top-level>": "/* L1 */ /* $OpenBSD: compat.c,v 1.121 2023/02/02 12:10:05 djm Exp $ */\n/* L2 */ /*\n/* L3 */  * Copyright (c) 1999, 2000, 2001, 2002 Markus Friedl.  All rights reserved.\n/* L4 */  *\n/* L215 */ "
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

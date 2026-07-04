@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-21:03",
+  "cve": [
+    "CVE-2020-25580"
+  ],
+  "subsystem": "pam_login_access",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "8cf559d6b9b4782bf67eb868ea480f47fc8c64a4"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nlogin.access(5) is a system configuration file allowing administrators to\ndefine policy around system login access by specific users and groups.  It\nis implemented by a pam(3) module, pam_login_access(8), and is configured\nby default for accesses via sshd(8), telnetd(8) and the system console.\n\nProblem Description:\nA regression in the login.access(5) rule processor has the effect of causing\nrules to fail to match even when they should not.  This means that rules\ndenying access may be ignored.\n\nImpact:\nThe configuration in login.access(5) may not be applied, permitting login\naccess to users even when the system is configured to deny it.\n\nWorkaround:\nNo workaround is available.  Systems not relying on login.access(5) to\nenforce custom login policies are not affected.",
+  "files_changed": [
+    "lib/libpam/modules/pam_login_access/login_access.c"
+  ],
+  "diff": "### commit 8cf559d6b9b4782bf67eb868ea480f47fc8c64a4\ndiff --git a/lib/libpam/modules/pam_login_access/login_access.c b/lib/libpam/modules/pam_login_access/login_access.c\nindex 9496081d362ed3..719808858dacc3 100644\n--- a/lib/libpam/modules/pam_login_access/login_access.c\n+++ b/lib/libpam/modules/pam_login_access/login_access.c\n@@ -137,10 +137,10 @@ list_match(char *list, const char *item,\n     if (match != NO) {\n \twhile ((tok = strtok((char *) 0, listsep)) && strcmp(tok, \"EXCEPT\")) {\n \t     /* VOID */ ;\n-\t    if (tok == NULL || list_match((char *) 0, item, match_fn,\n-\t\tlogin_access_opts) == NO) {\n+\t}\n+\tif (tok == NULL ||\n+\t    list_match((char *) 0, item, match_fn, login_access_opts) == NO) {\n \t\treturn (match);\n-\t    }\n \t}\n     }\n     return (NO);\n",
+  "extractable": true,
+  "before_code": {
+    "lib/libpam/modules/pam_login_access/login_access.c::list_match": "static int\nlist_match(char *list, const char *item,\n    int (*match_fn)(const char *, const char *, struct pam_login_access_options *),\n    struct pam_login_access_options *login_access_opts)\n{\n    char   *tok;\n    int     match = NO;\n    const char *listsep = login_access_opts->listsep;\n\n    /*\n     * Process tokens one at a time. We have exhausted all possible matches\n     * when we reach an \"EXCEPT\" token or the end of the list. If we do find\n     * a match, look for an \"EXCEPT\" list and recurse to determine whether\n     * the match is affected by any exceptions.\n     */\n\n    for (tok = strtok(list, listsep); tok != NULL; tok = strtok((char *) 0, listsep)) {\n\tif (strcmp(tok, \"EXCEPT\") == 0)\t/* EXCEPT: give up */\n\t    break;\n\tif ((match = (*match_fn)(tok, item, login_access_opts)) != 0)\t/* YES */\n\t    break;\n    }\n    /* Process exceptions to matches. */\n\n    if (match != NO) {\n\twhile ((tok = strtok((char *) 0, listsep)) && strcmp(tok, \"EXCEPT\")) {\n\t     /* VOID */ ;\n\t    if (tok == NULL || list_match((char *) 0, item, match_fn,\n\t\tlogin_access_opts) == NO) {\n\t\treturn (match);\n\t    }\n\t}\n    }\n    return (NO);\n}"
+  },
+  "after_code": {
+    "lib/libpam/modules/pam_login_access/login_access.c::list_match": "static int\nlist_match(char *list, const char *item,\n    int (*match_fn)(const char *, const char *, struct pam_login_access_options *),\n    struct pam_login_access_options *login_access_opts)\n{\n    char   *tok;\n    int     match = NO;\n    const char *listsep = login_access_opts->listsep;\n\n    /*\n     * Process tokens one at a time. We have exhausted all possible matches\n     * when we reach an \"EXCEPT\" token or the end of the list. If we do find\n     * a match, look for an \"EXCEPT\" list and recurse to determine whether\n     * the match is affected by any exceptions.\n     */\n\n    for (tok = strtok(list, listsep); tok != NULL; tok = strtok((char *) 0, listsep)) {\n\tif (strcmp(tok, \"EXCEPT\") == 0)\t/* EXCEPT: give up */\n\t    break;\n\tif ((match = (*match_fn)(tok, item, login_access_opts)) != 0)\t/* YES */\n\t    break;\n    }\n    /* Process exceptions to matches. */\n\n    if (match != NO) {\n\twhile ((tok = strtok((char *) 0, listsep)) && strcmp(tok, \"EXCEPT\")) {\n\t     /* VOID */ ;\n\t}\n\tif (tok == NULL ||\n\t    list_match((char *) 0, item, match_fn, login_access_opts) == NO) {\n\t\treturn (match);\n\t}\n    }\n    return (NO);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

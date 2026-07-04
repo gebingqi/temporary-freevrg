@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-25:03",
+  "cve": [
+    "CVE-2025-0374"
+  ],
+  "subsystem": "etcupdate",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "93836ff92be84a1d4e7611577ffe116a0e30d008",
+    "c55000e7c233573bae396df6099dcfc564abdcb7",
+    "b8945a926a2f10ebac7458b44e81acdc84413a91",
+    "17e935f1f327d7d4464e53f4f3d2347a51623f82",
+    "c1c180910d4677b00c7651d72b13f63f8f1c646c"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nThe etcupdate(8) utility is a tool for managing updates to files that are not\nupdated as part of ‘make installworld’ such as files in /etc.  It manages\nupdates by doing a three-way merge of changes made to these files against the\nlocal versions.  It is also designed to minimize the amount of user\nintervention with the goal of simplifying upgrades for clusters of machines.\n\nProblem Description:\nWhen etcupdate encounters conflicts while merging files, it saves a version\ncontaining conflict markers in /var/db/etcupdate/conflicts.  This version does\nnot preserve the mode of the input file, and is world-readable.  This applies\nto files that would normally have restricted visibility, such as\n/etc/master.passwd.\n\nImpact:\nAn unprivileged local user may be able to read encrypted root and user\npasswords from the temporary master.passwd file created in\n/var/db/etcupdate/conflicts.  This is possible only when conflicts within the\npassword file arise during an update, and the unprotected file is deleted when\nconflicts are resolved.\n\nWorkaround:\nNo workaround is available.  Systems whose files are updated using a mechanism\nother than etcupdate, such as freebsd-update(8), are unaffected.",
+  "files_changed": [
+    "usr.sbin/etcupdate/etcupdate.sh"
+  ],
+  "diff": "### commit 93836ff92be84a1d4e7611577ffe116a0e30d008\ndiff --git a/usr.sbin/etcupdate/etcupdate.sh b/usr.sbin/etcupdate/etcupdate.sh\nindex 39d1f9e56a5428..7bddd6593b562d 100755\n--- a/usr.sbin/etcupdate/etcupdate.sh\n+++ b/usr.sbin/etcupdate/etcupdate.sh\n@@ -1611,6 +1611,9 @@ EOF\n \t# Initialize conflicts and warnings handling.\n \trm -f $WARNINGS\n \tmkdir -p $CONFLICTS\n+\tif ! chmod 0700 ${CONFLICTS}; then\n+\t\tpanic \"Unable to set permissions on conflicts directory\"\n+\tfi\n \n \t# Ignore removed files for the pre-world case.  A pre-world\n \t# update uses a stripped-down tree.\n\n\n### commit c55000e7c233573bae396df6099dcfc564abdcb7\ndiff --git a/usr.sbin/etcupdate/etcupdate.sh b/usr.sbin/etcupdate/etcupdate.sh\nindex 39d1f9e56a5428..7bddd6593b562d 100755\n--- a/usr.sbin/etcupdate/etcupdate.sh\n+++ b/usr.sbin/etcupdate/etcupdate.sh\n@@ -1611,6 +1611,9 @@ EOF\n \t# Initialize conflicts and warnings handling.\n \trm -f $WARNINGS\n \tmkdir -p $CONFLICTS\n+\tif ! chmod 0700 ${CONFLICTS}; then\n+\t\tpanic \"Unable to set permissions on conflicts directory\"\n+\tfi\n \n \t# Ignore removed files for the pre-world case.  A pre-world\n \t# update uses a stripped-down tree.\n\n\n### commit b8945a926a2f10ebac7458b44e81acdc84413a91\ndiff --git a/usr.sbin/etcupdate/etcupdate.sh b/usr.sbin/etcupdate/etcupdate.sh\nindex 39d1f9e56a5428..7bddd6593b562d 100755\n--- a/usr.sbin/etcupdate/etcupdate.sh\n+++ b/usr.sbin/etcupdate/etcupdate.sh\n@@ -1611,6 +1611,9 @@ EOF\n \t# Initialize conflicts and warnings handling.\n \trm -f $WARNINGS\n \tmkdir -p $CONFLICTS\n+\tif ! chmod 0700 ${CONFLICTS}; then\n+\t\tpanic \"Unable to set permissions on conflicts directory\"\n+\tfi\n \n \t# Ignore removed files for the pre-world case.  A pre-world\n \t# update uses a stripped-down tree.\n\n\n### commit 17e935f1f327d7d4464e53f4f3d2347a51623f82\ndiff --git a/usr.sbin/etcupdate/etcupdate.sh b/usr.sbin/etcupdate/etcupdate.sh\nindex 6d8f58d39c54b8..ed259da7420ff9 100755\n--- a/usr.sbin/etcupdate/etcupdate.sh\n+++ b/usr.sbin/etcupdate/etcupdate.sh\n@@ -1561,6 +1561,9 @@ EOF\n \t# Initialize conflicts and warnings handling.\n \trm -f $WARNINGS\n \tmkdir -p $CONFLICTS\n+\tif ! chmod 0700 ${CONFLICTS}; then\n+\t\tpanic \"Unable to set permissions on conflicts directory\"\n+\tfi\n \n \t# Ignore removed files for the pre-world case.  A pre-world\n \t# update uses a stripped-down tree.\n\n\n### commit c1c180910d4677b00c7651d72b13f63f8f1c646c\ndiff --git a/usr.sbin/etcupdate/etcupdate.sh b/usr.sbin/etcupdate/etcupdate.sh\nindex 6d8f58d39c54b8..ed259da7420ff9 100755\n--- a/usr.sbin/etcupdate/etcupdate.sh\n+++ b/usr.sbin/etcupdate/etcupdate.sh\n@@ -1561,6 +1561,9 @@ EOF\n \t# Initialize conflicts and warnings handling.\n \trm -f $WARNINGS\n \tmkdir -p $CONFLICTS\n+\tif ! chmod 0700 ${CONFLICTS}; then\n+\t\tpanic \"Unable to set permissions on conflicts directory\"\n+\tfi\n \n \t# Ignore removed files for the pre-world case.  A pre-world\n \t# update uses a stripped-down tree.\n",
+  "extractable": false,
+  "before_code": {},
+  "after_code": {},
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

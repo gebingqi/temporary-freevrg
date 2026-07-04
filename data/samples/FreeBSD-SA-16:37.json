@@ -1,0 +1,33 @@
+{
+  "id": "FreeBSD-SA-16:37",
+  "cve": [
+    "CVE-2016-6559"
+  ],
+  "subsystem": "libc",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "e2069a8d2aadeb09d7da2796782a36f5ce229a52"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nThe link_ntoa(3) function generates ASCII representation of a link-level\naddress and is avaliable as part of standard C library (libc).\n\nProblem Description:\nA specially crafted argument can trigger a static buffer overflow in the\nlibrary, with possibility to rewrite following static buffers that belong to\nother library functions.\n\nImpact:\nDue to very limited use of the function in the existing applications,\nand limited length of the overflow, exploitation of the vulnerability\ndoes not seem feasible.  None of the utilities and daemons in the base\nsystem are known to be vulnerable.  However, careful review of third\nparty software that may use the function was not performed.\n\nWorkaround:\nNo workaround is available.",
+  "files_changed": [
+    "lib/libc/net/linkaddr.c"
+  ],
+  "diff": "### commit e2069a8d2aadeb09d7da2796782a36f5ce229a52\ndiff --git a/lib/libc/net/linkaddr.c b/lib/libc/net/linkaddr.c\nindex 2f7222bcb0e9d5..c62b9f974bdaac 100644\n--- a/lib/libc/net/linkaddr.c\n+++ b/lib/libc/net/linkaddr.c\n@@ -35,6 +35,7 @@ __FBSDID(\"$FreeBSD$\");\n \n #include <sys/types.h>\n #include <sys/socket.h>\n+#include <net/if.h>\n #include <net/if_dl.h>\n #include <string.h>\n \n@@ -122,31 +123,47 @@ char *\n link_ntoa(const struct sockaddr_dl *sdl)\n {\n \tstatic char obuf[64];\n-\tchar *out = obuf;\n-\tint i;\n-\tu_char *in = (u_char *)LLADDR(sdl);\n-\tu_char *inlim = in + sdl->sdl_alen;\n-\tint firsttime = 1;\n+\t_Static_assert(sizeof(obuf) >= IFNAMSIZ + 20, \"obuf is too small\");\n+\tchar *out;\n+\tconst char *in, *inlim;\n+\tint namelen, i, rem;\n \n-\tif (sdl->sdl_nlen) {\n-\t\tbcopy(sdl->sdl_data, obuf, sdl->sdl_nlen);\n-\t\tout += sdl->sdl_nlen;\n-\t\tif (sdl->sdl_alen)\n+\tnamelen = (sdl->sdl_nlen <= IFNAMSIZ) ? sdl->sdl_nlen : IFNAMSIZ;\n+\n+\tout = obuf;\n+\trem = sizeof(obuf);\n+\tif (namelen > 0) {\n+\t\tbcopy(sdl->sdl_data, out, namelen);\n+\t\tout += namelen;\n+\t\trem -= namelen;\n+\t\tif (sdl->sdl_alen > 0) {\n \t\t\t*out++ = ':';\n+\t\t\trem--;\n+\t\t}\n \t}\n-\twhile (in < inlim) {\n-\t\tif (firsttime)\n-\t\t\tfirsttime = 0;\n-\t\telse\n+\n+\tin = (const char *)sdl->sdl_data + sdl->sdl_nlen;\n+\tinlim = in + sdl->sdl_alen;\n+\n+\twhile (in < inlim && rem > 1) {\n+\t\tif (in != (const char *)sdl->sdl_data + sdl->sdl_nlen) {\n \t\t\t*out++ = '.';\n+\t\t\trem--;\n+\t\t}\n \t\ti = *in++;\n \t\tif (i > 0xf) {\n-\t\t\tout[1] = hexlist[i & 0xf];\n+\t\t\tif (rem < 3)\n+\t\t\t\tbreak;\n+\t\t\t*out++ = hexlist[i & 0xf];\n \t\t\ti >>= 4;\n-\t\t\tout[0] = hexlist[i];\n-\t\t\tout += 2;\n-\t\t} else\n \t\t\t*out++ = hexlist[i];\n+\t\t\trem -= 2;\n+\t\t} else {\n+\t\t\tif (rem < 2)\n+\t\t\t\tbreak;\n+\t\t\t*out++ = hexlist[i];\n+\t\t\trem++;\n+\t\t}\n \t}\n \t*out = 0;\n \treturn (obuf);\n",
+  "extractable": true,
+  "before_code": {
+    "lib/libc/net/linkaddr.c::link_ntoa": "char *\nlink_ntoa(const struct sockaddr_dl *sdl)\n{\n\tstatic char obuf[64];\n\tchar *out = obuf;\n\tint i;\n\tu_char *in = (u_char *)LLADDR(sdl);\n\tu_char *inlim = in + sdl->sdl_alen;\n\tint firsttime = 1;\n\n\tif (sdl->sdl_nlen) {\n\t\tbcopy(sdl->sdl_data, obuf, sdl->sdl_nlen);\n\t\tout += sdl->sdl_nlen;\n\t\tif (sdl->sdl_alen)\n\t\t\t*out++ = ':';\n\t}\n\twhile (in < inlim) {\n\t\tif (firsttime)\n\t\t\tfirsttime = 0;\n\t\telse\n\t\t\t*out++ = '.';\n\t\ti = *in++;\n\t\tif (i > 0xf) {\n\t\t\tout[1] = hexlist[i & 0xf];\n\t\t\ti >>= 4;\n\t\t\tout[0] = hexlist[i];\n\t\t\tout += 2;\n\t\t} else\n\t\t\t*out++ = hexlist[i];\n\t}\n\t*out = 0;\n\treturn (obuf);\n}",
+    "lib/libc/net/linkaddr.c::<top-level>": "/* L35 */ \n/* L36 */ #include <sys/types.h>\n/* L37 */ #include <sys/socket.h>\n/* L38 */ #include <net/if_dl.h>\n/* L39 */ #include <string.h>\n/* L40 */ "
+  },
+  "after_code": {
+    "lib/libc/net/linkaddr.c::link_ntoa": "char *\nlink_ntoa(const struct sockaddr_dl *sdl)\n{\n\tstatic char obuf[64];\n\t_Static_assert(sizeof(obuf) >= IFNAMSIZ + 20, \"obuf is too small\");\n\tchar *out;\n\tconst char *in, *inlim;\n\tint namelen, i, rem;\n\n\tnamelen = (sdl->sdl_nlen <= IFNAMSIZ) ? sdl->sdl_nlen : IFNAMSIZ;\n\n\tout = obuf;\n\trem = sizeof(obuf);\n\tif (namelen > 0) {\n\t\tbcopy(sdl->sdl_data, out, namelen);\n\t\tout += namelen;\n\t\trem -= namelen;\n\t\tif (sdl->sdl_alen > 0) {\n\t\t\t*out++ = ':';\n\t\t\trem--;\n\t\t}\n\t}\n\n\tin = (const char *)sdl->sdl_data + sdl->sdl_nlen;\n\tinlim = in + sdl->sdl_alen;\n\n\twhile (in < inlim && rem > 1) {\n\t\tif (in != (const char *)sdl->sdl_data + sdl->sdl_nlen) {\n\t\t\t*out++ = '.';\n\t\t\trem--;\n\t\t}\n\t\ti = *in++;\n\t\tif (i > 0xf) {\n\t\t\tif (rem < 3)\n\t\t\t\tbreak;\n\t\t\t*out++ = hexlist[i & 0xf];\n\t\t\ti >>= 4;\n\t\t\t*out++ = hexlist[i];\n\t\t\trem -= 2;\n\t\t} else {\n\t\t\tif (rem < 2)\n\t\t\t\tbreak;\n\t\t\t*out++ = hexlist[i];\n\t\t\trem++;\n\t\t}\n\t}\n\t*out = 0;\n\treturn (obuf);\n}",
+    "lib/libc/net/linkaddr.c::<top-level>": "/* L35 */ \n/* L36 */ #include <sys/types.h>\n/* L37 */ #include <sys/socket.h>\n/* L38 */ #include <net/if.h>\n/* L39 */ #include <net/if_dl.h>\n/* L40 */ #include <string.h>\n/* L41 */ "
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

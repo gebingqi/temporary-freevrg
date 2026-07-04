@@ -1,0 +1,34 @@
+{
+  "id": "FreeBSD-SA-17:11",
+  "cve": [
+    "CVE-2017-3735",
+    "CVE-2017-3736"
+  ],
+  "subsystem": "openssl",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "a6c99a40328a373952c7676be0b8ef916f0923c9"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nFreeBSD includes software from the OpenSSL Project.  The OpenSSL Project is\na collaborative effort to develop a robust, commercial-grade, full-featured\nOpen Source toolkit for the Transport Layer Security (TLS) and Secure Sockets\nLayer (SSL) protocols. It is also a full-strength general purpose\ncryptography library.\n\nProblem Description:\nIf an X.509 certificate has a malformed IPAddressFamily extension, OpenSSL\ncould do a one-byte buffer overread. [CVE-2017-3735]\n\nThere is a carry propagating bug in the x86_64 Montgomery squaring procedure.\nThis only affects processors that support the BMI1, BMI2 and ADX extensions\nlike Intel Broadwell (5th generation) and later or AMD Ryzen. [CVE-2017-3736]\nThis bug only affects FreeBSD 11.x.\n\nImpact:\nApplication using OpenSSL may display erroneous certificate in text format.\n[CVE-2017-3735]\n\nMishandling of carry propagation will produce incorrect output, and make it\neasier for a remote attacker to obtain sensitive private-key information.\nNo EC algorithms are affected, analysis suggests that attacks against RSA\nand DSA as a result of this defect would be very difficult to perform and\nare not believed likely.\n\nAttacks against DH are considered just feasible (although very difficult)\nbecause most of the work necessary to deduce information about a private\nkey may be performed offline.  The amount of resources required for such\nan attack would be very significant and likely only accessible to a limited\nnumber of attackers. An attacker would additionally need online access to\nan unpatched system using the target private key in a scenario with\npersistent DH parameters and a private key that is shared between multiple\nclients. [CVE-2017-3736]\n\nWorkaround:\nNo workaround is available.",
+  "files_changed": [
+    "crypto/openssl/crypto/bn/asm/x86_64-mont5.pl",
+    "crypto/openssl/crypto/x509v3/v3_addr.c",
+    "secure/lib/libcrypto/amd64/x86_64-mont5.S"
+  ],
+  "diff": "### commit a6c99a40328a373952c7676be0b8ef916f0923c9\ndiff --git a/UPDATING b/UPDATING\nindex dab8af99e0b7b5..e63fad129e3454 100644\n--- a/UPDATING\n+++ b/UPDATING\n@@ -16,6 +16,10 @@ from older versions of FreeBSD, try WITHOUT_CLANG and WITH_GCC to bootstrap to\n the tip of head, and then rebuild without this option. The bootstrap process\n from older version of current across the gcc/clang cutover is a bit fragile.\n \n+20171129\tp5\tFreeBSD-SA-17:11.openssl\n+\n+\tFix multiple vulnerabilities of OpenSSL.\n+\n 20171115\tp4\tFreeBSD-SA-17:08.ptrace\n \t\t\tFreeBSD-SA-17:10.kldstat\n \ndiff --git a/crypto/openssl/crypto/bn/asm/x86_64-mont5.pl b/crypto/openssl/crypto/bn/asm/x86_64-mont5.pl\nindex 3bb0cdf5bd391a..42178e455a981d 100755\n--- a/crypto/openssl/crypto/bn/asm/x86_64-mont5.pl\n+++ b/crypto/openssl/crypto/bn/asm/x86_64-mont5.pl\n@@ -3090,11 +3090,19 @@\n \n .align\t32\n .Lsqrx8x_break:\n-\tsub\t16+8(%rsp),%r8\t\t# consume last carry\n+\txor\t$zero,$zero\n+\tsub\t16+8(%rsp),%rbx\t\t# mov 16(%rsp),%cf\n+\tadcx\t$zero,%r8\n \tmov\t24+8(%rsp),$carry\t# initial $tptr, borrow $carry\n+\tadcx\t$zero,%r9\n \tmov\t0*8($aptr),%rdx\t\t# a[8], modulo-scheduled\n-\txor\t%ebp,%ebp\t\t# xor\t$zero,$zero\n+\tadc\t\\$0,%r10\n \tmov\t%r8,0*8($tptr)\n+\tadc\t\\$0,%r11\n+\tadc\t\\$0,%r12\n+\tadc\t\\$0,%r13\n+\tadc\t\\$0,%r14\n+\tadc\t\\$0,%r15\n \tcmp\t$carry,$tptr\t\t# cf=0, of=0\n \tje\t.Lsqrx8x_outer_loop\n \ndiff --git a/crypto/openssl/crypto/x509v3/v3_addr.c b/crypto/openssl/crypto/x509v3/v3_addr.c\nindex 1290dec9bb8c0c..af080a04f2ba20 100644\n--- a/crypto/openssl/crypto/x509v3/v3_addr.c\n+++ b/crypto/openssl/crypto/x509v3/v3_addr.c\n@@ -130,10 +130,12 @@ static int length_from_afi(const unsigned afi)\n  */\n unsigned int v3_addr_get_afi(const IPAddressFamily *f)\n {\n-    return ((f != NULL &&\n-             f->addressFamily != NULL && f->addressFamily->data != NULL)\n-            ? ((f->addressFamily->data[0] << 8) | (f->addressFamily->data[1]))\n-            : 0);\n+    if (f == NULL\n+            || f->addressFamily == NULL\n+            || f->addressFamily->data == NULL\n+            || f->addressFamily->length < 2)\n+        return 0;\n+    return (f->addressFamily->data[0] << 8) | f->addressFamily->data[1];\n }\n \n /*\ndiff --git a/secure/lib/libcrypto/amd64/x86_64-mont5.S b/secure/lib/libcrypto/amd64/x86_64-mont5.S\nindex 3d1b0ce4706e38..f4a12d7d8a9870 100644\n--- a/secure/lib/libcrypto/amd64/x86_64-mont5.S\n+++ b/secure/lib/libcrypto/amd64/x86_64-mont5.S\n@@ -3077,11 +3077,19 @@ __bn_sqrx8x_internal:\n \n .align\t32\n .Lsqrx8x_break:\n-\tsubq\t16+8(%rsp),%r8\n+\txorq\t%rbp,%rbp\n+\tsubq\t16+8(%rsp),%rbx\n+\tadcxq\t%rbp,%r8\n \tmovq\t24+8(%rsp),%rcx\n+\tadcxq\t%rbp,%r9\n \tmovq\t0(%rsi),%rdx\n-\txorl\t%ebp,%ebp\n+\tadcq\t$0,%r10\n \tmovq\t%r8,0(%rdi)\n+\tadcq\t$0,%r11\n+\tadcq\t$0,%r12\n+\tadcq\t$0,%r13\n+\tadcq\t$0,%r14\n+\tadcq\t$0,%r15\n \tcmpq\t%rcx,%rdi\n \tje\t.Lsqrx8x_outer_loop\n \n",
+  "extractable": true,
+  "before_code": {
+    "crypto/openssl/crypto/x509v3/v3_addr.c::v3_addr_get_afi": "unsigned int v3_addr_get_afi(const IPAddressFamily *f)\n{\n    return ((f != NULL &&\n             f->addressFamily != NULL && f->addressFamily->data != NULL)\n            ? ((f->addressFamily->data[0] << 8) | (f->addressFamily->data[1]))\n            : 0);\n}"
+  },
+  "after_code": {
+    "crypto/openssl/crypto/x509v3/v3_addr.c::v3_addr_get_afi": "unsigned int v3_addr_get_afi(const IPAddressFamily *f)\n{\n    if (f == NULL\n            || f->addressFamily == NULL\n            || f->addressFamily->data == NULL\n            || f->addressFamily->length < 2)\n        return 0;\n    return (f->addressFamily->data[0] << 8) | f->addressFamily->data[1];\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

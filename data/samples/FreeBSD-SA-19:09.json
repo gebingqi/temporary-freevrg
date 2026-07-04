@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-19:09",
+  "cve": [
+    "CVE-2019-5600"
+  ],
+  "subsystem": "iconv",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "3130948d4a40cf702d8c2fef140467b484ee0715"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\nThe iconv(3) API converts text data from one character encoding to another\nand is available as part of the standard C library (libc).\n\nProblem Description:\nWith certain inputs, iconv may write beyond the end of the output buffer.\n\nImpact:\nDepending on the way in which iconv is used, an attacker may be able to\ncreate a denial of service, provoke incorrect program behavior, or induce a\nremote code execution.  iconv is a libc library function and the nature of\npossible attacks will depend on the way in which iconv is used by\napplications or daemons.\n\nWorkaround:\nNo workaround is available.  Stack canaries (-fstack-protector), which are\nenabled by default, provide a degreee of defense against code injection but\nnot against denial of service.",
+  "files_changed": [
+    "lib/libc/iconv/citrus_none.c"
+  ],
+  "diff": "### commit 3130948d4a40cf702d8c2fef140467b484ee0715\ndiff --git a/lib/libc/iconv/citrus_none.c b/lib/libc/iconv/citrus_none.c\nindex bb1f963a6be545..033fe4011e00e2 100644\n--- a/lib/libc/iconv/citrus_none.c\n+++ b/lib/libc/iconv/citrus_none.c\n@@ -144,7 +144,7 @@ _citrus_NONE_stdenc_cstomb(struct _citrus_stdenc * __restrict ce __unused,\n \t\ts[2] = (char)(idx >> 16);\n \t\t*nresult = 3;\n \t} else {\n-\t\tif (n < 3) {\n+\t\tif (n < 4) {\n \t\t\t*nresult = (size_t)-1;\n \t\t\treturn (E2BIG);\n \t\t}\n",
+  "extractable": true,
+  "before_code": {
+    "lib/libc/iconv/citrus_none.c::_citrus_NONE_stdenc_cstomb": "static int\n_citrus_NONE_stdenc_cstomb(struct _citrus_stdenc * __restrict ce __unused,\n    char *s, size_t n, _csid_t csid, _index_t idx, void *ps __unused,\n    size_t *nresult, struct iconv_hooks *hooks __unused)\n{\n\n\tif (csid == _CITRUS_CSID_INVALID) {\n\t\t*nresult = 0;\n\t\treturn (0);\n\t}\n\tif (csid != 0)\n\t\treturn (EILSEQ);\n\n\tif ((idx & 0x000000FF) == idx) {\n\t\tif (n < 1) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\t*s = (char)idx;\n\t\t*nresult = 1;\n\t} else if ((idx & 0x0000FFFF) == idx) {\n\t\tif (n < 2) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\ts[0] = (char)idx;\n\t\t/* XXX: might be endian dependent */\n\t\ts[1] = (char)(idx >> 8);\n\t\t*nresult = 2;\n\t} else if ((idx & 0x00FFFFFF) == idx) {\n\t\tif (n < 3) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\ts[0] = (char)idx;\n\t\t/* XXX: might be endian dependent */\n\t\ts[1] = (char)(idx >> 8);\n\t\ts[2] = (char)(idx >> 16);\n\t\t*nresult = 3;\n\t} else {\n\t\tif (n < 3) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\ts[0] = (char)idx;\n\t\t/* XXX: might be endian dependent */\n\t\ts[1] = (char)(idx >> 8);\n\t\ts[2] = (char)(idx >> 16);\n\t\ts[3] = (char)(idx >> 24);\n\t\t*nresult = 4;\n\t}\n\t\t\n\treturn (0);\n}"
+  },
+  "after_code": {
+    "lib/libc/iconv/citrus_none.c::_citrus_NONE_stdenc_cstomb": "static int\n_citrus_NONE_stdenc_cstomb(struct _citrus_stdenc * __restrict ce __unused,\n    char *s, size_t n, _csid_t csid, _index_t idx, void *ps __unused,\n    size_t *nresult, struct iconv_hooks *hooks __unused)\n{\n\n\tif (csid == _CITRUS_CSID_INVALID) {\n\t\t*nresult = 0;\n\t\treturn (0);\n\t}\n\tif (csid != 0)\n\t\treturn (EILSEQ);\n\n\tif ((idx & 0x000000FF) == idx) {\n\t\tif (n < 1) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\t*s = (char)idx;\n\t\t*nresult = 1;\n\t} else if ((idx & 0x0000FFFF) == idx) {\n\t\tif (n < 2) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\ts[0] = (char)idx;\n\t\t/* XXX: might be endian dependent */\n\t\ts[1] = (char)(idx >> 8);\n\t\t*nresult = 2;\n\t} else if ((idx & 0x00FFFFFF) == idx) {\n\t\tif (n < 3) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\ts[0] = (char)idx;\n\t\t/* XXX: might be endian dependent */\n\t\ts[1] = (char)(idx >> 8);\n\t\ts[2] = (char)(idx >> 16);\n\t\t*nresult = 3;\n\t} else {\n\t\tif (n < 4) {\n\t\t\t*nresult = (size_t)-1;\n\t\t\treturn (E2BIG);\n\t\t}\n\t\ts[0] = (char)idx;\n\t\t/* XXX: might be endian dependent */\n\t\ts[1] = (char)(idx >> 8);\n\t\ts[2] = (char)(idx >> 16);\n\t\ts[3] = (char)(idx >> 24);\n\t\t*nresult = 4;\n\t}\n\t\t\n\treturn (0);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}

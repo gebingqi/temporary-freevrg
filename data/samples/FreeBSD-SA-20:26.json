@@ -1,0 +1,31 @@
+{
+  "id": "FreeBSD-SA-20:26",
+  "cve": [
+    "CVE-2020-7461"
+  ],
+  "subsystem": "dhclient",
+  "cwe": [],
+  "affected_versions": [
+    "All supported versions of FreeBSD."
+  ],
+  "fix_commits": [
+    "b2ed812dbd2e0872806aed91ec528ed46271c5ca"
+  ],
+  "advisory_source": "freebsd_sa",
+  "advisory_text": "Background:\ndhclient(8) is the default IPv4 DHCP client used on FreeBSD.  It is\nresponsible for contacting DHCP servers on a network segment, and for\ninitializing and configuring network interfaces and configuring name\nresolution based on received information.\n\ndhclient(8) handles DHCP option 119, the Domain Search Option, which provides\na list of domains to search when resolving names using DNS.  The option data\nformat uses a compression scheme to avoid transmitting duplicate domain name\nlabels.\n\nProblem Description:\nWhen parsing option 119 data, dhclient(8) computes the uncompressed domain\nlist length so that it can allocate an appropriately sized buffer to store\nthe uncompressed list.  The code to compute the length failed to handle\ncertain malformed input, resulting in a heap overflow when the uncompressed\nlist is copied into in inadequately sized buffer.\n\nImpact:\nThe heap overflow could in principle be exploited to achieve remote code\nexecution.  The affected process runs with reduced privileges in a Capsicum\nsandbox, limiting the immediate impact of an exploit.  However, it is\npossible the bug could be combined with other vulnerabilities to escape the\nsandbox.\n\nWorkaround:\nNo workaround is available.  To trigger the bug, a system must be running\ndhclient(8) on the same network as a malicious DHCP server.",
+  "files_changed": [
+    "sbin/dhclient/options.c"
+  ],
+  "diff": "### commit b2ed812dbd2e0872806aed91ec528ed46271c5ca\ndiff --git a/sbin/dhclient/options.c b/sbin/dhclient/options.c\nindex dc4cceab84189d..afdb3985aa5992 100644\n--- a/sbin/dhclient/options.c\n+++ b/sbin/dhclient/options.c\n@@ -298,6 +298,8 @@ find_search_domain_name_len(struct option_data *option, size_t *offset)\n \n \t\t\tpointed_len = find_search_domain_name_len(option,\n \t\t\t    &pointer);\n+\t\t\tif (pointed_len < 0)\n+\t\t\t\treturn (-1);\n \t\t\tdomain_name_len += pointed_len;\n \n \t\t\t*offset = i + 2;\n",
+  "extractable": true,
+  "before_code": {
+    "sbin/dhclient/options.c::find_search_domain_name_len": "int\nfind_search_domain_name_len(struct option_data *option, size_t *offset)\n{\n\tint domain_name_len, label_len, pointed_len;\n\tsize_t i, pointer;\n\n\tdomain_name_len = 0;\n\n\ti = *offset;\n\twhile (i < option->len) {\n\t\tlabel_len = option->data[i];\n\t\tif (label_len == 0) {\n\t\t\t/*\n\t\t\t * A zero-length label marks the end of this\n\t\t\t * domain name.\n\t\t\t */\n\t\t\t*offset = i + 1;\n\t\t\treturn (domain_name_len);\n\t\t} else if (label_len & 0xC0) {\n\t\t\t/* This is a pointer to another list of labels. */\n\t\t\tif (i + 1 >= option->len) {\n\t\t\t\t/* The pointer is truncated. */\n\t\t\t\twarning(\"Truncated pointer in DHCP Domain \"\n\t\t\t\t    \"Search option.\");\n\t\t\t\treturn (-1);\n\t\t\t}\n\n\t\t\tpointer = ((label_len & ~(0xC0)) << 8) +\n\t\t\t    option->data[i + 1];\n\t\t\tif (pointer >= *offset) {\n\t\t\t\t/*\n\t\t\t\t * The pointer must indicate a prior\n\t\t\t\t * occurrence.\n\t\t\t\t */\n\t\t\t\twarning(\"Invalid forward pointer in DHCP \"\n\t\t\t\t    \"Domain Search option compression.\");\n\t\t\t\treturn (-1);\n\t\t\t}\n\n\t\t\tpointed_len = find_search_domain_name_len(option,\n\t\t\t    &pointer);\n\t\t\tdomain_name_len += pointed_len;\n\n\t\t\t*offset = i + 2;\n\t\t\treturn (domain_name_len);\n\t\t}\n\n\t\tif (i + label_len >= option->len) {\n\t\t\twarning(\"Truncated label in DHCP Domain Search \"\n\t\t\t    \"option.\");\n\t\t\treturn (-1);\n\t\t}\n\n\t\t/*\n\t\t * Update the domain name length with the length of the\n\t\t * current label, plus a trailing dot ('.').\n\t\t */\n\t\tdomain_name_len += label_len + 1;\n\n\t\t/* Move cursor. */\n\t\ti += label_len + 1;\n\t}\n\n\twarning(\"Truncated DHCP Domain Search option.\");\n\n\treturn (-1);\n}"
+  },
+  "after_code": {
+    "sbin/dhclient/options.c::find_search_domain_name_len": "int\nfind_search_domain_name_len(struct option_data *option, size_t *offset)\n{\n\tint domain_name_len, label_len, pointed_len;\n\tsize_t i, pointer;\n\n\tdomain_name_len = 0;\n\n\ti = *offset;\n\twhile (i < option->len) {\n\t\tlabel_len = option->data[i];\n\t\tif (label_len == 0) {\n\t\t\t/*\n\t\t\t * A zero-length label marks the end of this\n\t\t\t * domain name.\n\t\t\t */\n\t\t\t*offset = i + 1;\n\t\t\treturn (domain_name_len);\n\t\t} else if (label_len & 0xC0) {\n\t\t\t/* This is a pointer to another list of labels. */\n\t\t\tif (i + 1 >= option->len) {\n\t\t\t\t/* The pointer is truncated. */\n\t\t\t\twarning(\"Truncated pointer in DHCP Domain \"\n\t\t\t\t    \"Search option.\");\n\t\t\t\treturn (-1);\n\t\t\t}\n\n\t\t\tpointer = ((label_len & ~(0xC0)) << 8) +\n\t\t\t    option->data[i + 1];\n\t\t\tif (pointer >= *offset) {\n\t\t\t\t/*\n\t\t\t\t * The pointer must indicate a prior\n\t\t\t\t * occurrence.\n\t\t\t\t */\n\t\t\t\twarning(\"Invalid forward pointer in DHCP \"\n\t\t\t\t    \"Domain Search option compression.\");\n\t\t\t\treturn (-1);\n\t\t\t}\n\n\t\t\tpointed_len = find_search_domain_name_len(option,\n\t\t\t    &pointer);\n\t\t\tif (pointed_len < 0)\n\t\t\t\treturn (-1);\n\t\t\tdomain_name_len += pointed_len;\n\n\t\t\t*offset = i + 2;\n\t\t\treturn (domain_name_len);\n\t\t}\n\n\t\tif (i + label_len >= option->len) {\n\t\t\twarning(\"Truncated label in DHCP Domain Search \"\n\t\t\t    \"option.\");\n\t\t\treturn (-1);\n\t\t}\n\n\t\t/*\n\t\t * Update the domain name length with the length of the\n\t\t * current label, plus a trailing dot ('.').\n\t\t */\n\t\tdomain_name_len += label_len + 1;\n\n\t\t/* Move cursor. */\n\t\ti += label_len + 1;\n\t}\n\n\twarning(\"Truncated DHCP Domain Search option.\");\n\n\treturn (-1);\n}"
+  },
+  "context": {
+    "callers": [],
+    "callees": []
+  }
+}
