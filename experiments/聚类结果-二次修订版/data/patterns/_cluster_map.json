@@ -1,0 +1,89 @@
+{
+  "fixed-buffer-overflow-in-link-address-formatting": [
+    "CVE-2016-6559"
+  ],
+  "incorrect-privilege-drop-failure-handling": [
+    "CVE-2020-7468"
+  ],
+  "insecure-default-feature-enabled": [
+    "CVE-2016-0777"
+  ],
+  "logic-error-in-access-control-list-match": [
+    "CVE-2020-25580"
+  ],
+  "missing-absolute-path-check-in-archive-extraction": [
+    "CVE-2015-2304",
+    "CVE-2013-0211"
+  ],
+  "missing-alert-loop-counter-limit": [
+    "CVE-2016-8610"
+  ],
+  "missing-array-bounds-check-on-network-controlled-index": [
+    "CVE-2018-17161",
+    "CVE-2019-5604",
+    "CVE-2021-29631"
+  ],
+  "missing-certificate-chain-validation": [
+    "CVE-2015-1793"
+  ],
+  "missing-default-case-for-unknown-command": [
+    "CVE-2021-29630"
+  ],
+  "missing-dispatch-deregistration-after-one-shot-handler": [
+    "CVE-2016-8858"
+  ],
+  "missing-embedded-null-byte-check-in-url-credentials": [
+    "CVE-2021-36159"
+  ],
+  "missing-input-length-limit-before-expensive-operation": [
+    "CVE-2016-6515"
+  ],
+  "missing-length-bound-before-guest-address-range-addition": [
+    "CVE-2016-1889"
+  ],
+  "missing-length-upper-bound-check-in-protocol-parsing": [
+    "CVE-2019-5610"
+  ],
+  "missing-minimum-length-check-on-network-protocol-packet": [
+    "CVE-2020-7461",
+    "CVE-2021-29629"
+  ],
+  "missing-nonnegative-check-before-allocation-size-calculation": [
+    "CVE-2015-1283"
+  ],
+  "missing-null-check-after-malloc": [
+    "CVE-2015-7236"
+  ],
+  "missing-null-check-after-strdup": [
+    "CVE-2016-1888"
+  ],
+  "missing-null-check-in-crl-validation": [
+    "CVE-2016-7052"
+  ],
+  "missing-null-check-in-openssl-certificate-parsing": [
+    "CVE-2020-1967",
+    "CVE-2020-1971"
+  ],
+  "missing-null-check-on-url-parse-pointer": [
+    "CVE-2020-7450"
+  ],
+  "missing-sign-check-on-patch-control-values": [
+    "CVE-2014-9862"
+  ],
+  "missing-signedness-normalization-on-guest-controlled-length": [
+    "CVE-2018-17160",
+    "CVE-2019-5609"
+  ],
+  "off-by-one-in-multibyte-length-check": [
+    "CVE-2019-5600"
+  ],
+  "stack-overflow-from-alloca-on-attacker-controlled-path": [
+    "CVE-2020-7458"
+  ],
+  "unsafe-buffer-handling-with-unchecked-malloc": [
+    "CVE-2019-0053"
+  ],
+  "weak-cipher-negotiation-allowed": [
+    "CVE-2015-3197"
+  ]
+}

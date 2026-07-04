@@ -1,0 +1,56 @@
+# FreeVRG revised grounding_check
+# samples: D:\桌面\学习\实习\样本库\基线-v1
+
+## Instances
+[实例 PASS_STRICT] CVE-2013-0211 (CVE-2013-0211.md)
+[实例 PASS_WEAK] CVE-2014-9862 (CVE-2014-9862.md)
+    - sink token not directly visible in after_code: memcpy
+[实例 PASS_STRICT] CVE-2015-1283 (CVE-2015-1283.md)
+[实例 PASS_STRICT] CVE-2015-1793 (CVE-2015-1793.md)
+[实例 PASS_STRICT] CVE-2015-2304 (CVE-2015-2304.md)
+[实例 PASS_STRICT] CVE-2015-3197 (CVE-2015-3197.md)
+[实例 PASS_STRICT] CVE-2015-7236 (CVE-2015-7236.md)
+[实例 PASS_STRICT] CVE-2016-0777 (CVE-2016-0777.md)
+[实例 PASS_STRICT] CVE-2016-1888 (CVE-2016-1888.md)
+[实例 PASS_STRICT] CVE-2016-1889 (CVE-2016-1889.md)
+[实例 PASS_WEAK] CVE-2016-6515 (CVE-2016-6515.md)
+    - sink token not directly visible in after_code: crypt
+[实例 PASS_STRICT] CVE-2016-6559 (CVE-2016-6559.md)
+[实例 PASS_STRICT] CVE-2016-7052 (CVE-2016-7052.md)
+[实例 PASS_STRICT] CVE-2016-8610 (CVE-2016-8610.md)
+[实例 PASS_STRICT] CVE-2016-8858 (CVE-2016-8858.md)
+[实例 PASS_STRICT] CVE-2018-17160 (CVE-2018-17160.md)
+[实例 PASS_STRICT] CVE-2018-17161 (CVE-2018-17161.md)
+[实例 PASS_WEAK] CVE-2019-0053 (CVE-2019-0053.md)
+    - added_guard is code-grounded but weak: comment/preprocessor line
+[实例 PASS_STRICT] CVE-2019-5600 (CVE-2019-5600.md)
+[实例 PASS_STRICT] CVE-2019-5604 (CVE-2019-5604.md)
+[实例 PASS_WEAK] CVE-2019-5609 (CVE-2019-5609.md)
+    - added_guard is code-grounded but weak: not a guard-like code line
+[实例 PASS_STRICT] CVE-2019-5610 (CVE-2019-5610.md)
+[实例 PASS_STRICT] CVE-2020-1967 (CVE-2020-1967.md)
+[实例 PASS_STRICT] CVE-2020-1971 (CVE-2020-1971.md)
+[实例 PASS_STRICT] CVE-2020-25580 (CVE-2020-25580.md)
+[实例 PASS_STRICT] CVE-2020-7450 (CVE-2020-7450.md)
+[实例 PASS_WEAK] CVE-2020-7458 (CVE-2020-7458.md)
+    - added_guard is code-grounded but weak: not a guard-like code line
+[实例 PASS_STRICT] CVE-2020-7461 (CVE-2020-7461.md)
+[实例 PASS_WEAK] CVE-2020-7468 (CVE-2020-7468.md)
+    - sink token not directly visible in after_code: setuid
+[实例 PASS_STRICT] CVE-2021-29629 (CVE-2021-29629.md)
+[实例 PASS_STRICT] CVE-2021-29630 (CVE-2021-29630.md)
+[实例 PASS_STRICT] CVE-2021-29631 (CVE-2021-29631.md)
+[实例 PASS_STRICT] CVE-2021-36159 (CVE-2021-36159.md)
+
+## Patterns
+[类层 PASS_WEAK] missing-absolute-path-check-in-archive-extraction (missing-absolute-path-check-in-archive-extraction.md)
+    - rule_candidate: defer
+[类层 PASS_STRICT] missing-array-bounds-check-on-network-controlled-index (missing-array-bounds-check-on-network-controlled-index.md)
+[类层 PASS_STRICT] missing-minimum-length-check-on-network-protocol-packet (missing-minimum-length-check-on-network-protocol-packet.md)
+[类层 PASS_WEAK] missing-null-check-in-openssl-certificate-parsing (missing-null-check-in-openssl-certificate-parsing.md)
+    - rule_candidate: defer
+[类层 PASS_WEAK] missing-signedness-normalization-on-guest-controlled-length (missing-signedness-normalization-on-guest-controlled-length.md)
+    - rule_candidate: defer
+
+## Summary
+结论: 无 FAIL；Rule Agent 试点 pattern 均 PASS_STRICT

@@ -1,0 +1,513 @@
+[
+    {
+        "source_sa":  "FreeBSD-SA-15:06",
+        "local_sample":  "FreeBSD-SA-15-06.json",
+        "subsystem":  "openssl",
+        "cve_count":  8,
+        "cve_list":  [
+                         "CVE-2015-0209",
+                         "CVE-2015-0286",
+                         "CVE-2015-0287",
+                         "CVE-2015-0288",
+                         "CVE-2015-0289",
+                         "CVE-2015-0293",
+                         "CVE-2015-0204",
+                         "CVE-2015-0292"
+                     ],
+        "fix_commits":  [
+                            "4d7eabc985b266b4743bceb9997aedd5828bae14"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/asn1/a_type.c",
+                              "crypto/openssl/crypto/asn1/tasn_dec.c",
+                              "crypto/openssl/crypto/pkcs7/pk7_doit.c",
+                              "crypto/openssl/crypto/pkcs7/pk7_lib.c",
+                              "crypto/openssl/ssl/s2_lib.c",
+                              "crypto/openssl/ssl/s2_srvr.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-15:26",
+        "local_sample":  "FreeBSD-SA-15-26.json",
+        "subsystem":  "openssl",
+        "cve_count":  3,
+        "cve_list":  [
+                         "CVE-2015-3194",
+                         "CVE-2015-3195",
+                         "CVE-2015-3196"
+                     ],
+        "fix_commits":  [
+                            "c800785d3a41149c2ee3644464d9436cca9c1b7d"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/asn1/tasn_dec.c",
+                              "crypto/openssl/crypto/rsa/rsa_ameth.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-16:26",
+        "local_sample":  "FreeBSD-SA-16-26.json",
+        "subsystem":  "openssl",
+        "cve_count":  10,
+        "cve_list":  [
+                         "CVE-2016-2177",
+                         "CVE-2016-2178",
+                         "CVE-2016-2179",
+                         "CVE-2016-2180",
+                         "CVE-2016-2181",
+                         "CVE-2016-2182",
+                         "CVE-2016-6302",
+                         "CVE-2016-6303",
+                         "CVE-2016-6304",
+                         "CVE-2016-6306"
+                     ],
+        "fix_commits":  [
+                            "6107c6581a0c4f2dcc21288dd2bbde22c4909d85"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/bn/bn_print.c",
+                              "crypto/openssl/crypto/dsa/dsa_ossl.c",
+                              "crypto/openssl/crypto/mdc2/mdc2dgst.c",
+                              "crypto/openssl/crypto/ts/ts_lib.c",
+                              "crypto/openssl/ssl/d1_both.c",
+                              "crypto/openssl/ssl/d1_clnt.c",
+                              "crypto/openssl/ssl/d1_lib.c",
+                              "crypto/openssl/ssl/d1_pkt.c",
+                              "crypto/openssl/ssl/d1_srvr.c",
+                              "crypto/openssl/ssl/s3_clnt.c",
+                              "crypto/openssl/ssl/s3_srvr.c",
+                              "crypto/openssl/ssl/ssl.h",
+                              "crypto/openssl/ssl/ssl_err.c",
+                              "crypto/openssl/ssl/ssl_locl.h",
+                              "crypto/openssl/ssl/ssl_sess.c",
+                              "crypto/openssl/ssl/t1_lib.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-17:01",
+        "local_sample":  "FreeBSD-SA-17-01.json",
+        "subsystem":  "openssh",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2016-10009",
+                         "CVE-2016-10010"
+                     ],
+        "fix_commits":  [
+                            "b24c303d3028aa8a288a317e00544dcbc4f4c641"
+                        ],
+        "files_changed":  [
+                              "crypto/openssh/serverloop.c",
+                              "crypto/openssh/ssh-agent.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-17:11",
+        "local_sample":  "FreeBSD-SA-17-11.json",
+        "subsystem":  "openssl",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2017-3735",
+                         "CVE-2017-3736"
+                     ],
+        "fix_commits":  [
+                            "a6c99a40328a373952c7676be0b8ef916f0923c9"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/bn/asm/x86_64-mont5.pl",
+                              "crypto/openssl/crypto/x509v3/v3_addr.c",
+                              "secure/lib/libcrypto/amd64/x86_64-mont5.S"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-17:12",
+        "local_sample":  "FreeBSD-SA-17-12.json",
+        "subsystem":  "openssl",
+        "cve_count":  3,
+        "cve_list":  [
+                         "CVE-2017-3737",
+                         "CVE-2017-3738",
+                         "CVE-2016-0701"
+                     ],
+        "fix_commits":  [
+                            "b79493272a47bc9c98501c4c03deaf8c0d983287"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/bn/asm/rsaz-avx2.pl",
+                              "crypto/openssl/ssl/ssl.h",
+                              "secure/lib/libcrypto/amd64/rsaz-avx2.S"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-19:18",
+        "local_sample":  "FreeBSD-SA-19-18.json",
+        "subsystem":  "bzip2",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2016-3189",
+                         "CVE-2019-12900"
+                     ],
+        "fix_commits":  [
+                            "12a4559aa3e5cb247f2c3bbf9250bbab63aeabc5"
+                        ],
+        "files_changed":  [
+                              "contrib/bzip2/LICENSE",
+                              "contrib/bzip2/README.COMPILATION.PROBLEMS",
+                              "contrib/bzip2/blocksort.c",
+                              "contrib/bzip2/bzip2.c",
+                              "contrib/bzip2/bzip2recover.c",
+                              "contrib/bzip2/bzlib.c",
+                              "contrib/bzip2/bzlib.h",
+                              "contrib/bzip2/bzlib_private.h",
+                              "contrib/bzip2/compress.c",
+                              "contrib/bzip2/crctable.c",
+                              "contrib/bzip2/decompress.c",
+                              "contrib/bzip2/huffman.c",
+                              "contrib/bzip2/randtable.c",
+                              "contrib/bzip2/spewG.c",
+                              "contrib/bzip2/unzcrash.c",
+                              "contrib/bzip2/words2"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-20:32",
+        "local_sample":  "FreeBSD-SA-20-32.json",
+        "subsystem":  "rtsold",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2020-25577",
+                         "CVE-2020-25583"
+                     ],
+        "fix_commits":  [
+                            "e937464e2b89799135b7ba511b9f999573dbb115"
+                        ],
+        "files_changed":  [
+                              "usr.sbin/rtsold/rtsol.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-21:07",
+        "local_sample":  "FreeBSD-SA-21-07.json",
+        "subsystem":  "openssl",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2021-3449",
+                         "CVE-2021-3450"
+                     ],
+        "fix_commits":  [
+                            "b6c1fdcdf5033d20c61cc77d66f58f31cc65e2ba"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/NEWS",
+                              "crypto/openssl/apps/s_cb.c",
+                              "crypto/openssl/apps/s_time.c",
+                              "crypto/openssl/crypto/asn1/asn1_par.c",
+                              "crypto/openssl/crypto/asn1/bio_ndef.c",
+                              "crypto/openssl/crypto/engine/eng_devcrypto.c",
+                              "crypto/openssl/crypto/evp/evp_enc.c",
+                              "crypto/openssl/crypto/modes/cbc128.c",
+                              "crypto/openssl/crypto/modes/gcm128.c",
+                              "crypto/openssl/crypto/o_time.c",
+                              "crypto/openssl/crypto/rand/rand_lib.c",
+                              "crypto/openssl/crypto/rsa/rsa_ssl.c",
+                              "crypto/openssl/crypto/x509/x509_vfy.c",
+                              "crypto/openssl/include/openssl/opensslv.h",
+                              "crypto/openssl/ssl/s3_lib.c",
+                              "crypto/openssl/ssl/ssl_lib.c",
+                              "crypto/openssl/ssl/statem/extensions.c",
+                              "crypto/openssl/ssl/statem/extensions_clnt.c",
+                              "crypto/openssl/ssl/statem/statem_clnt.c",
+                              "crypto/openssl/ssl/statem/statem_srvr.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-21:16",
+        "local_sample":  "FreeBSD-SA-21-16.json",
+        "subsystem":  "openssl",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2021-3711",
+                         "CVE-2021-3712"
+                     ],
+        "fix_commits":  [
+                            "9d31ae318711825d3a6ffa544d197708905435cf",
+                            "2261c814b7fa4730f308b476eff1afb0dcdf35ec"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/asn1/asn1_lib.c",
+                              "crypto/openssl/crypto/asn1/t_spki.c",
+                              "crypto/openssl/crypto/ec/ec_asn1.c",
+                              "crypto/openssl/crypto/sm2/sm2_crypt.c",
+                              "crypto/openssl/crypto/sm2/sm2_pmeth.c",
+                              "crypto/openssl/crypto/x509v3/v3_akey.c",
+                              "crypto/openssl/crypto/x509v3/v3_alt.c",
+                              "crypto/openssl/crypto/x509v3/v3_cpols.c",
+                              "crypto/openssl/crypto/x509v3/v3_ncons.c",
+                              "crypto/openssl/crypto/x509v3/v3_pci.c",
+                              "crypto/openssl/crypto/x509v3/v3_utl.c",
+                              "crypto/openssl/include/crypto/sm2.h",
+                              "crypto/openssl/include/crypto/x509.h",
+                              "crypto/openssl/include/openssl/opensslv.h"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-21:17",
+        "local_sample":  "FreeBSD-SA-21-17.json",
+        "subsystem":  "openssl",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2021-23840",
+                         "CVE-2021-23841"
+                     ],
+        "fix_commits":  [
+                            "895e0245469d0d3a267d2685f27d97532c461520"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/err/openssl.txt",
+                              "crypto/openssl/crypto/evp/evp_enc.c",
+                              "crypto/openssl/crypto/evp/evp_err.c",
+                              "crypto/openssl/crypto/x509/x509_cmp.c",
+                              "crypto/openssl/include/openssl/evperr.h"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-24:04",
+        "local_sample":  "FreeBSD-SA-24-04.json",
+        "subsystem":  "openssh",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2024-6387",
+                         "CVE-2006-5051"
+                     ],
+        "fix_commits":  [
+                            "620a6a54bb7bb6e1c5607092b6ec49e353e0925f",
+                            "8f80def8aa085385dc4fe4668f0e29d3a0dc8510",
+                            "70eb00f17b310f599b60939c1afa326c7b2c390c",
+                            "25cf430cd551158135ef6f0c1aadf273ff3430c9",
+                            "e3e0912f29771deed47955c36d38a8eb88ae32e0",
+                            "99ad94894edf0585bc8c5a2b2a6eb7162db29a34"
+                        ],
+        "files_changed":  [
+                              "crypto/openssh/log.c",
+                              "crypto/openssh/version.h"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-24:08",
+        "local_sample":  "FreeBSD-SA-24-08.json",
+        "subsystem":  "openssh",
+        "cve_count":  3,
+        "cve_list":  [
+                         "CVE-2024-7589",
+                         "CVE-2024-6387",
+                         "CVE-2006-5051"
+                     ],
+        "fix_commits":  [
+                            "2abea9df01655633aabbb9bf3204c90722001202"
+                        ],
+        "files_changed":  [
+                              "crypto/openssh/log.c",
+                              "crypto/openssh/version.h"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-24:17",
+        "local_sample":  "FreeBSD-SA-24-17.json",
+        "subsystem":  "bhyve",
+        "cve_count":  5,
+        "cve_list":  [
+                         "CVE-2024-51562",
+                         "CVE-2024-51563",
+                         "CVE-2024-51564",
+                         "CVE-2024-51565",
+                         "CVE-2024-51566"
+                     ],
+        "fix_commits":  [
+                            "86ba5941b132c73476a2a1b76ae53902a027b81c",
+                            "fcd9a2d8a5bd6a76a70ea49fee8af8a73e2ce85a",
+                            "df1a36fdfae603ce298b8396ae3388d337c3c5b3",
+                            "5d07a7e902fa225b9aee635b0073491d54bcc307",
+                            "adb7b541aea13de4a53096966354b1c14a196bba"
+                        ],
+        "files_changed":  [
+                              "usr.sbin/bhyve/pci_nvme.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-25:05",
+        "local_sample":  "FreeBSD-SA-25-05.json",
+        "subsystem":  "openssh",
+        "cve_count":  2,
+        "cve_list":  [
+                         "CVE-2025-26465",
+                         "CVE-2025-26466"
+                     ],
+        "fix_commits":  [
+                            "24ce323f020fb1ee1b463e524a7a6c15f47ec2a4",
+                            "4b8a2f716588e58ddb39ccdb60189e8c57239457",
+                            "fe49460873e0cc87f938922a0f6f22890929adc7",
+                            "2fc62d0bd4f7ca90d7abdfaf076dd49022bf7d54",
+                            "78b4f775184c368821586565dde4b9ab7f08c00c",
+                            "14c733f25493bad48235272ccea0b59b956bfe1f"
+                        ],
+        "files_changed":  [
+                              "crypto/openssh/version.h"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-25:08",
+        "local_sample":  "FreeBSD-SA-25-08.json",
+        "subsystem":  "openssl",
+        "cve_count":  3,
+        "cve_list":  [
+                         "CVE-2025-9230",
+                         "CVE-2025-9231",
+                         "CVE-2025-9232"
+                     ],
+        "fix_commits":  [
+                            "4d6fd774b5b3161314805f4dc6ba260ef977f583",
+                            "270158508d7c55a0737c2a9915cd4afc8fabdaf0",
+                            "75d258af9fe98e79ead9c54d7f15b30f970155a7",
+                            "6a0d914d9c3ebd8c150b7f90e79616d16efefee8",
+                            "c0dbaf2b5dbd16c113a6346ee748fd474fe192e5",
+                            "ae7c74cfa5315e590cf7ef6fe8fe5e72330597e9"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/crypto/cms/cms_pwri.c",
+                              "crypto/openssl/crypto/ec/ecp_sm2p256.c",
+                              "crypto/openssl/crypto/http/http_lib.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    },
+    {
+        "source_sa":  "FreeBSD-SA-26:01",
+        "local_sample":  "FreeBSD-SA-26-01.json",
+        "subsystem":  "openssl",
+        "cve_count":  12,
+        "cve_list":  [
+                         "CVE-2025-11187",
+                         "CVE-2025-15467",
+                         "CVE-2025-15468",
+                         "CVE-2025-15469",
+                         "CVE-2025-66199",
+                         "CVE-2025-68160",
+                         "CVE-2025-69418",
+                         "CVE-2025-69419",
+                         "CVE-2025-69420",
+                         "CVE-2025-69421",
+                         "CVE-2026-22795",
+                         "CVE-2026-22796"
+                     ],
+        "fix_commits":  [
+                            "5626e81f1a43f507023a8edd291f02547fe955de",
+                            "02f448fe5cc2c4bbba13cde5add6f37b40ceb4ba",
+                            "ee8d50bfd59e7619db618bf63e48e108997db8bd",
+                            "65c1295c6bb083f2d3f82f19e773b841faad8147",
+                            "1741502f8d930a368a92aa1b72039053738f8a24",
+                            "9afc16c4e8a2548cbaeb560011e844aac707a81f"
+                        ],
+        "files_changed":  [
+                              "crypto/openssl/apps/dgst.c",
+                              "crypto/openssl/apps/include/apps.h",
+                              "crypto/openssl/apps/lib/apps.c",
+                              "crypto/openssl/apps/pkeyutl.c",
+                              "crypto/openssl/apps/s_client.c",
+                              "crypto/openssl/crypto/asn1/a_strex.c",
+                              "crypto/openssl/crypto/asn1/evp_asn1.c",
+                              "crypto/openssl/crypto/bio/bf_lbuf.c",
+                              "crypto/openssl/crypto/evp/evp_lib.c",
+                              "crypto/openssl/crypto/modes/ocb128.c",
+                              "crypto/openssl/crypto/pkcs12/p12_decr.c",
+                              "crypto/openssl/crypto/pkcs12/p12_kiss.c",
+                              "crypto/openssl/crypto/pkcs12/p12_mutl.c",
+                              "crypto/openssl/crypto/pkcs12/p12_utl.c",
+                              "crypto/openssl/crypto/pkcs7/pk7_doit.c",
+                              "crypto/openssl/crypto/ts/ts_rsp_verify.c",
+                              "crypto/openssl/ssl/quic/quic_impl.c",
+                              "crypto/openssl/ssl/statem/statem_lib.c"
+                          ],
+        "status":  "pending_child_commit_search",
+        "preferred_evidence_mode":  "child_commit_exact",
+        "fallback_evidence_mode":  "cve_guided_composite",
+        "next_action":  "先按 CVE 查找 upstream/child commit；若找不到，则保留综合 diff，并用单个 CVE 描述定位相关文件、函数、hunk、source/sink/sanitizer。",
+        "notes":  "不伪造独立 commit；通过 grounding 前不进入第一批 Rule Agent。"
+    }
+]

@@ -378,6 +378,14 @@ def validate_rule(rule_path, val_set):
 
 也就是说，原型阶段先不把“测试集评估”“大规模当前代码扫描”“复杂自动修正策略”作为第一优先级，而是先证明最小闭环是通的。
 
+### 4.7 当前阶段落点
+
+当前已完成 PatternAgent 到类层 pattern 的前半段验证。基于 62 条单 CVE、可提取 C 样本中的 33 条 train 样本，已经形成 33 个实例层分析文件、27 个细粒度漏洞类、5 个多实例 class pattern 和 2 个第一批 RuleAgent 试点 pattern。
+
+第一批 RuleAgent 只接收 single_commit / exact_patch / PASS_STRICT 的 pattern，当前限定为 missing-array-bounds-check-on-network-controlled-index 与 missing-minimum-length-check-on-network-protocol-packet。
+
+当前 27 个细粒度类暂不立即合并。下一阶段先通过上述两个试点跑通 RuleAgent、CodeQL 编译、历史漏洞召回和 fixed-version 误报验证，再根据规则生成难度、召回效果和误报情况，将细粒度类重组为更粗的上位漏洞族。
+
 ## 5. 关键设计决策
 
 ### 5.1 为什么不先训练模型

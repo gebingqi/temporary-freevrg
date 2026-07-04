@@ -1,0 +1,18 @@
+[
+  {
+    "pattern": "missing-array-bounds-check-on-network-controlled-index",
+    "rule_type": "intra-procedural",
+    "module_scope": "cross-module",
+    "pilot_source_status": "single_commit/exact_patch/PASS_STRICT",
+    "selection_policy": "第一批 Rule Agent 只接收 exact_patch 且 grounding 为 PASS_STRICT 的 pattern；多 CVE 分流结果通过 grounding 前不进入第一批。",
+    "reason": "跨 bootpd/bhyve，数组索引或描述符数量缺少上界检查，历史成员证据完整。"
+  },
+  {
+    "pattern": "missing-minimum-length-check-on-network-protocol-packet",
+    "rule_type": "intra-procedural",
+    "module_scope": "cross-module",
+    "pilot_source_status": "single_commit/exact_patch/PASS_STRICT",
+    "selection_policy": "第一批 Rule Agent 只接收 exact_patch 且 grounding 为 PASS_STRICT 的 pattern；多 CVE 分流结果通过 grounding 前不进入第一批。",
+    "reason": "跨 dhclient/libradius，网络协议长度缺少最小值或非负检查，适合先做函数内数据流。"
+  }
+]

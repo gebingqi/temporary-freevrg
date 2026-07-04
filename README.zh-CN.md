@@ -60,6 +60,13 @@ flowchart TD
 - 基于 `.env` 的配置加载已经就位
 - 主流程已经串联完成
 - LLM 调用和真实 CodeQL 执行仍然是占位实现
+- 当前 v1 基线包含 62 条单 CVE、可提取的 C 样本
+- 当前训练轮覆盖 33 条 train 样本，形成 27 个细粒度漏洞类
+- PatternAgent 二次修订实验包包含 33 个实例分析、5 个多实例类层 pattern 和 grounding 日志
+- 第一批 RuleAgent 只使用 2 个 PASS_STRICT 试点：
+  - missing-array-bounds-check-on-network-controlled-index
+  - missing-minimum-length-check-on-network-protocol-packet
+- 当前 27 个细粒度类暂不立即合并；后续根据 RuleAgent 与 CodeQL 验证结果重组为更粗的漏洞族
 
 ## 项目结构
 
