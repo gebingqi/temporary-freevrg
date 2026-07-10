@@ -238,5 +238,11 @@ codeql-results/
 logs/
 *.out
 
+# First pilot CodeQL runtime artifacts
+codeql/first-pilot/minimal-validation-databases/db/
+codeql/first-pilot/minimal-validation-databases/logs/
+codeql/first-pilot/minimal-validation-databases/results/
+codeql/first-pilot/validation/smoke-summary.tsv
+
 # Ignore any file or directory with "Identifier" in its name
 *Identifier*

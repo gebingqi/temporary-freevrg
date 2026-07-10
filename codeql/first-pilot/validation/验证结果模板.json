@@ -1,0 +1,102 @@
+{
+  "schema_version": "freevrg-validation-result-v0.1",
+  "package": "first-ql-validation-package",
+  "codeql_version": "2.25.6",
+  "compile": {
+    "status": "pass",
+    "command": "codeql query compile --check-only --additional-packs <codeql-stdlib> -- <package>",
+    "notes": ""
+  },
+  "rules": [
+    {
+      "pattern_id": "missing-array-bounds-check-on-network-controlled-index",
+      "query_path": "queries/missing-array-bounds-check-on-network-controlled-index.ql",
+      "compile_status": "pass",
+      "recall": [
+        {
+          "cve": "CVE-2018-17161",
+          "database": "",
+          "expected_file": "libexec/bootpd/bootpd.c",
+          "expected_function": "handle_request",
+          "status": "not_run",
+          "notes": ""
+        },
+        {
+          "cve": "CVE-2019-5604",
+          "database": "",
+          "expected_file": "usr.sbin/bhyve/pci_xhci.c",
+          "expected_function": "pci_xhci_device_doorbell",
+          "status": "not_run",
+          "notes": ""
+        },
+        {
+          "cve": "CVE-2021-29631",
+          "database": "",
+          "expected_file": "usr.sbin/bhyve/pci_virtio_9p.c",
+          "expected_function": "pci_vt9p_notify",
+          "status": "not_run",
+          "notes": ""
+        }
+      ],
+      "fixed_false_positive": [
+        {
+          "cve": "CVE-2018-17161",
+          "database": "",
+          "status": "not_run",
+          "notes": ""
+        },
+        {
+          "cve": "CVE-2019-5604",
+          "database": "",
+          "status": "not_run",
+          "notes": ""
+        },
+        {
+          "cve": "CVE-2021-29631",
+          "database": "",
+          "status": "not_run",
+          "notes": ""
+        }
+      ],
+      "decision": "not_run"
+    },
+    {
+      "pattern_id": "missing-minimum-length-check-on-network-protocol-packet",
+      "query_path": "queries/missing-minimum-length-check-on-network-protocol-packet.ql",
+      "compile_status": "pass",
+      "recall": [
+        {
+          "cve": "CVE-2020-7461",
+          "database": "",
+          "expected_file": "sbin/dhclient/options.c",
+          "expected_function": "find_search_domain_name_len",
+          "status": "not_run",
+          "notes": ""
+        },
+        {
+          "cve": "CVE-2021-29629",
+          "database": "",
+          "expected_file": "lib/libradius/radlib.c",
+          "expected_function": "is_valid_response",
+          "status": "not_run",
+          "notes": ""
+        }
+      ],
+      "fixed_false_positive": [
+        {
+          "cve": "CVE-2020-7461",
+          "database": "",
+          "status": "not_run",
+          "notes": ""
+        },
+        {
+          "cve": "CVE-2021-29629",
+          "database": "",
+          "status": "not_run",
+          "notes": ""
+        }
+      ],
+      "decision": "not_run"
+    }
+  ]
+}

@@ -54,7 +54,7 @@ flowchart TD
 
 ## 当前状态
 
-这个仓库目前还是一个原型骨架。
+这个仓库目前还是一个原型骨架，但已经把 `../FreeBSD/` 里的阶段性研究资产整理进来了。
 
 - 目录结构已经就位
 - 基于 `.env` 的配置加载已经就位
@@ -67,19 +67,23 @@ flowchart TD
   - missing-array-bounds-check-on-network-controlled-index
   - missing-minimum-length-check-on-network-protocol-packet
 - 当前 27 个细粒度类暂不立即合并；后续根据 RuleAgent 与 CodeQL 验证结果重组为更粗的漏洞族
+- pattern grounding、RuleAgent 试点输入和首批 CodeQL 试点材料已经入库
 
 ## 项目结构
 
 ```text
 FreeVRG/
   agents/
+  codeql/
   core/
   data/
     samples/
     patterns/
     rules/
     results/
+  docs/
   prompts/
+  research/
   main.py
   .env.example
   technical_design.md
@@ -88,12 +92,30 @@ FreeVRG/
 关键目录说明：
 
 - `agents/`：`Pattern Agent` 与 `Rule Agent`
+- `codeql/first-pilot/`：首批候选 CodeQL pack、说明、验证材料和最小 harness 源码
 - `core/`：配置加载、流程编排、校验器
 - `data/samples/`：结构化历史漏洞样本
 - `data/patterns/`：生成的模式文档
 - `data/rules/`：生成的 CodeQL 规则
 - `data/results/`：校验结果以及后续扫描输出
+- `docs/`：项目文档和导入后的研究笔记
 - `prompts/`：两个 Agent 使用的提示词模板
+- `research/`：整理后的 pattern grounding 数据和 RuleAgent 试点输入
+
+## 已整理的临时工作
+
+此前位于 `../FreeBSD/` 的临时工作已经按用途归档到仓库中：
+
+- `research/pattern-grounding/`：训练集 CVE 的聚类修订版和 grounding 数据包。
+  主要内容包括：`data/instances/` 下逐条 CVE 的分析记录、`data/patterns/` 下类级 pattern 文档、`_cluster_map.json`、`_rule_candidates.json`、`logs/grounding_train.txt` 以及 `scripts/grounding_check.py`。
+- `research/rule-agent-pilot/`：基于两个 `PASS_STRICT` pattern 整理出的首批 RuleAgent 试点输入包。
+  主要内容包括：各 pattern 目录下的 `rule_input.json`、模式摘要、`子模板/` 中的模板说明、`_class_family_map.json`、RuleAgent 输入输出规范、验证计划，以及 `rules/` 下的工作草案 `.ql`。
+- `codeql/first-pilot/`：首批试点规则的 CodeQL 验证包。
+  主要内容包括：`queries/` 下候选查询、`metadata/` 下来源和范围记录、`notes/` 下建模说明、`validation/` 下编译和 smoke 验证记录、`scripts/run_smoke_validation.sh`，以及 `minimal-validation-databases/source/` 下 5 个 CVE 的 vulnerable/fixed 最小 harness 源码。
+- `docs/research-notes/`：从临时工作区导入的配套研究笔记。
+  主要内容包括：项目背景、系统架构说明、数据集说明和 Pattern Agent 输入规范。
+
+映射关系和未纳入版本控制的运行产物见 `docs/imported-assets.md`。
 
 ## 配置
 
@@ -154,3 +176,4 @@ python main.py data/samples/<sample-file>
 - `technical_design.md` 包含当前原型架构与工作流设计
 - `data/patterns/`、`data/rules/` 和 `data/results/` 下的内容属于运行产物
 - `data/samples/` 下的历史样本属于人工整理输入
+- 导入后的研究与试点资产位于 `research/`、`codeql/first-pilot/` 和 `docs/research-notes/`

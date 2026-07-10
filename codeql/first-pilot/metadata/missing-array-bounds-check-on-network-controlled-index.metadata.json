@@ -1,0 +1,21 @@
+{
+  "schema_version": "freevrg-ruleagent-output-metadata-v0.1",
+  "pattern_id": "missing-array-bounds-check-on-network-controlled-index",
+  "query_path": "queries/missing-array-bounds-check-on-network-controlled-index.ql",
+  "source_rule_input": "../RuleAgent试点包/missing-array-bounds-check-on-network-controlled-index/rule_input.json",
+  "source_rule_input_sha256": "F90D2DC910C4AE4CB2273C9BE4E898D3AF6F4D4FD3B9ED9E22A45BB155EA69A8",
+  "subtemplate": "array-index-upper-bound",
+  "generation_mode": "manual_candidate_v1_based_on_ruleagent_trial_package",
+  "generated_on": "2026-07-07",
+  "scope": {
+    "language": "c/cpp",
+    "rule_type": "intra-procedural",
+    "module_scope": "cross-module"
+  },
+  "expected_recall_targets": [
+    "CVE-2018-17161",
+    "CVE-2019-5604",
+    "CVE-2021-29631"
+  ],
+  "status": "compile_pass_recall_pending"
+}

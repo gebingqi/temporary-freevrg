@@ -1,0 +1,45 @@
+{
+  "schema_version": "freevrg-class-family-map-v0.1",
+  "scope": "first_ruleagent_pilot_only",
+  "families": {
+    "bounds-check": {
+      "description": "外部可控整数进入数组、描述符、协议长度、偏移或缓冲区访问前缺少必要边界检查。",
+      "subtemplates": {
+        "array-index-upper-bound": {
+          "description": "外部可控索引、endpoint id、描述符链长度或 iovec 数量进入数组/描述符访问前缺少上界或有效区间检查。",
+          "patterns": [
+            "missing-array-bounds-check-on-network-controlled-index"
+          ],
+          "status": "pilot",
+          "template_file": "子模板/数组描述符上界检查子模板.md"
+        },
+        "packet-minimum-length": {
+          "description": "网络协议长度、偏移或属性长度字段进入解析循环、指针推进或属性读取前缺少最小长度/非负检查。",
+          "patterns": [
+            "missing-minimum-length-check-on-network-protocol-packet"
+          ],
+          "status": "pilot",
+          "template_file": "子模板/网络协议最小长度检查子模板.md"
+        }
+      }
+    }
+  },
+  "deferred_patterns": [
+    {
+      "pattern": "missing-absolute-path-check-in-archive-extraction",
+      "reason": "PASS_WEAK; rule_candidate: defer; 当前只作为模块特定类保留。"
+    },
+    {
+      "pattern": "missing-null-check-in-openssl-certificate-parsing",
+      "reason": "PASS_WEAK; rule_candidate: defer; 需要先收窄为 OpenSSL/TLS/ASN.1 解析上下文。"
+    },
+    {
+      "pattern": "missing-signedness-normalization-on-guest-controlled-length",
+      "reason": "PASS_WEAK; rule_candidate: defer; 需要先拆清 signedness、长度加法和类型收窄边界。"
+    }
+  ],
+  "notes": [
+    "本映射只服务第一批 RuleAgent 试点，不是论文最终分类体系。",
+    "后续是否扩展 bounds-check family 或新增 null-check、path-normalization、signedness-conversion family，应由 CodeQL 编译、召回和误报验证结果决定。"
+  ]
+}

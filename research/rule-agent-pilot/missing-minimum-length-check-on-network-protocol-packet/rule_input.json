@@ -1,0 +1,106 @@
+{
+  "schema_version": "freevrg-ruleagent-input-v0.1",
+  "pattern_id": "missing-minimum-length-check-on-network-protocol-packet",
+  "title_zh": "网络协议长度或偏移缺少最小长度/非负检查",
+  "pilot_status": "single_commit/exact_patch/PASS_STRICT",
+  "rule_candidate": "pilot",
+  "rule_scope": {
+    "language": "c/cpp",
+    "module_scope": "cross-module",
+    "rule_type": "intra-procedural",
+    "recommended_subtemplate": "网络协议最小长度检查子模板"
+  },
+  "pattern": {
+    "description": "网络协议解析器从 UDP/DHCP/RADIUS 等报文中解码长度、偏移或属性长度字段后，仅检查其是否超过缓冲区上界，未检查协议要求的最小有效长度或非负性。",
+    "source": [
+      "网络报文中的 Length 字段",
+      "TLV 属性长度",
+      "压缩域名指针偏移",
+      "协议解析函数返回的有符号长度或偏移"
+    ],
+    "sink": [
+      "解码长度控制循环边界",
+      "解码长度控制指针推进",
+      "以属性长度推进报文解析位置",
+      "基于长度读取协议属性或缓冲区范围"
+    ],
+    "sanitizer": [
+      "len < MIN_PROTOCOL_LENGTH",
+      "len < 0",
+      "pointed_len < 0",
+      "alen < 2",
+      "len < MIN || len > buffer_len"
+    ],
+    "vulnerable_indicator": "从网络包读取的长度或偏移值进入循环、指针推进或缓冲区访问，仅存在上界检查，缺少非负性或协议最小长度检查。",
+    "fixed_indicator": "使用点前存在 len < MIN、len < 0、alen < 2 或 len < MIN || len > buffer_len 形式的双侧检查。",
+    "target_apis": [
+      "POS_ATTRS",
+      "POS_LENGTH",
+      "MD5_DIGEST_LENGTH"
+    ],
+    "negative_examples": [
+      "长度字段来自已验证的固定头部，且调用前已有统一协议解码器保证最小长度。",
+      "解析循环每次推进前都检查剩余缓冲区至少包含 TLV 头部和声明长度。",
+      "长度只用于日志输出或错误消息，不影响读取、循环或指针推进。"
+    ]
+  },
+  "member_instances": [
+    {
+      "cve": "CVE-2020-7461",
+      "source_sa": "FreeBSD-SA-20:26",
+      "subsystem": "dhclient",
+      "split": "train",
+      "files": [
+        "sbin/dhclient/options.c"
+      ],
+      "expected_function": "find_search_domain_name_len",
+      "fix_commits": [
+        "b2ed812dbd2e0872806aed91ec528ed46271c5ca"
+      ],
+      "patch_granularity": "single_commit",
+      "evidence_mode": "exact_patch",
+      "requires_review": false,
+      "source": "DHCP 服务端响应中的 Option 119 域名搜索列表",
+      "sink": "pointed_len 用于控制域名追踪循环边界",
+      "sanitizer": "if (pointed_len < 0)",
+      "grounding": "PASS_STRICT"
+    },
+    {
+      "cve": "CVE-2021-29629",
+      "source_sa": "FreeBSD-SA-21:12",
+      "subsystem": "libradius",
+      "split": "train",
+      "files": [
+        "lib/libradius/radlib.c"
+      ],
+      "expected_function": "is_valid_response",
+      "fix_commits": [
+        "bec0d2c9c8413707b0fff8e65fb96aa53f149be3",
+        "7d900abe6269af09d63746ceebe008e49454535e"
+      ],
+      "patch_granularity": "single_commit",
+      "evidence_mode": "exact_patch",
+      "requires_review": false,
+      "source": "RADIUS 服务端响应包中的 Length 字段",
+      "sink": "is_valid_response/rad_get_attr 基于 len 读取数据包属性字节",
+      "sanitizer": "if (len < POS_ATTRS || len > h->in_len)",
+      "grounding": "PASS_STRICT"
+    }
+  ],
+  "ruleagent_constraints": [
+    "不要把只有上界检查的代码误判为已完整修复。",
+    "优先报告循环、指针推进、属性读取或解析位置更新位置。",
+    "第一版优先函数内检测。",
+    "双侧检查和非负检查应作为 sanitizer 识别。"
+  ],
+  "validation_plan": {
+    "compile": "codeql query compile",
+    "recall_targets": [
+      "CVE-2020-7461 vulnerable version should report find_search_domain_name_len or equivalent pointed_len parser use",
+      "CVE-2021-29629 vulnerable version should report is_valid_response or equivalent len/POS_ATTRS parser use"
+    ],
+    "fixed_false_positive_targets": [
+      "Corresponding fixed versions should not report the same guarded locations"
+    ]
+  }
+}

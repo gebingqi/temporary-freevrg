@@ -1,0 +1,20 @@
+{
+  "schema_version": "freevrg-ruleagent-output-metadata-v0.1",
+  "pattern_id": "missing-minimum-length-check-on-network-protocol-packet",
+  "query_path": "queries/missing-minimum-length-check-on-network-protocol-packet.ql",
+  "source_rule_input": "../RuleAgent试点包/missing-minimum-length-check-on-network-protocol-packet/rule_input.json",
+  "source_rule_input_sha256": "0D497A9EB99B8126D7F58B37C75336B8350005DFE4D7806B5A71534CF82F091B",
+  "subtemplate": "packet-minimum-length",
+  "generation_mode": "manual_candidate_v1_based_on_ruleagent_trial_package",
+  "generated_on": "2026-07-07",
+  "scope": {
+    "language": "c/cpp",
+    "rule_type": "intra-procedural",
+    "module_scope": "cross-module"
+  },
+  "expected_recall_targets": [
+    "CVE-2020-7461",
+    "CVE-2021-29629"
+  ],
+  "status": "compile_pass_recall_pending"
+}

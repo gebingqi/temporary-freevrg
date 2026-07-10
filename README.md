@@ -54,25 +54,29 @@ This avoids leaking very similar vulnerability patterns into both generation and
 
 ## Current Status
 
-The repository is currently a prototype skeleton.
+The repository is currently a prototype skeleton with curated research assets imported.
 
 - directory structure is in place
 - `.env`-based configuration is in place
 - the main pipeline is wired together
 - LLM calls and real CodeQL execution are still placeholders
+- pattern-grounding, Rule Agent pilot inputs, and first-pass CodeQL pilot materials are now tracked in-repo
 
 ## Project Structure
 
 ```text
 FreeVRG/
   agents/
+  codeql/
   core/
   data/
     samples/
     patterns/
     rules/
     results/
+  docs/
   prompts/
+  research/
   main.py
   .env.example
   technical_design.md
@@ -81,12 +85,30 @@ FreeVRG/
 Key directories:
 
 - `agents/`: Pattern Agent and Rule Agent
+- `codeql/first-pilot/`: first candidate CodeQL pack, notes, validation plan, and minimal harness sources
 - `core/`: config loading, orchestrator, validator
 - `data/samples/`: structured historical vulnerability samples
 - `data/patterns/`: generated pattern documents
 - `data/rules/`: generated CodeQL rules
 - `data/results/`: validation results and later scan outputs
+- `docs/`: project documentation and imported research notes
 - `prompts/`: prompt templates for the two agents
+- `research/`: curated pattern-grounding data and Rule Agent pilot inputs
+
+## Imported Research Assets
+
+The temporary work previously stored under `../FreeBSD/` has been reorganized into this repository:
+
+- `research/pattern-grounding/`: revised clustering and grounding package for the training-set CVEs.
+  Main contents: `data/instances/` per-CVE analysis notes, `data/patterns/` class-level pattern documents, `_cluster_map.json`, `_rule_candidates.json`, `logs/grounding_train.txt`, and `scripts/grounding_check.py`.
+- `research/rule-agent-pilot/`: the first Rule Agent pilot input package built from two `PASS_STRICT` patterns.
+  Main contents: per-pattern `rule_input.json`, pattern summaries, subtemplates under `子模板/`, `_class_family_map.json`, the Rule Agent I/O spec, the validation plan, and the working draft `.ql` files under `rules/`.
+- `codeql/first-pilot/`: the first candidate CodeQL validation package for the pilot rules.
+  Main contents: `queries/` candidate queries, `metadata/` provenance and scope records, `notes/` modeling notes, `validation/` compile and smoke-validation records, `scripts/run_smoke_validation.sh`, and `minimal-validation-databases/source/` with the minimal vulnerable/fixed harness sources for five CVEs.
+- `docs/research-notes/`: supporting project notes imported from the temporary workspace.
+  Main contents: project background, system architecture notes, dataset notes, and the Pattern Agent input specification.
+
+See `docs/imported-assets.md` for the mapping and the list of intentionally excluded generated artifacts.
 
 ## Configuration
 
@@ -147,3 +169,4 @@ The current pipeline will:
 - `technical_design.md` contains the current prototype architecture and workflow design
 - generated artifacts under `data/patterns/`, `data/rules/`, and `data/results/` are runtime outputs
 - historical samples under `data/samples/` are intended to be curated inputs
+- imported research and pilot assets live under `research/`, `codeql/first-pilot/`, and `docs/research-notes/`

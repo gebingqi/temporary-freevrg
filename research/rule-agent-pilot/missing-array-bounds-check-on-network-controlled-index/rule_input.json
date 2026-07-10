@@ -1,0 +1,126 @@
+{
+  "schema_version": "freevrg-ruleagent-input-v0.1",
+  "pattern_id": "missing-array-bounds-check-on-network-controlled-index",
+  "title_zh": "外部可控索引或描述符数量缺少上界检查",
+  "pilot_status": "single_commit/exact_patch/PASS_STRICT",
+  "rule_candidate": "pilot",
+  "rule_scope": {
+    "language": "c/cpp",
+    "module_scope": "cross-module",
+    "rule_type": "intra-procedural",
+    "recommended_subtemplate": "数组描述符上界检查子模板"
+  },
+  "pattern": {
+    "description": "网络对端或 VM 访客传入的整数字段被用作宿主侧数组索引、数组访问数量或 iovec 描述符数量，使用前缺少与数组容量或协议上限的比较，导致越界读取或写入。",
+    "source": [
+      "网络请求结构体字段",
+      "VM 访客通过 MMIO、寄存器或 doorbell 写入的整数字段",
+      "VirtQueue 或描述符环返回的链长度"
+    ],
+    "sink": [
+      "外部整数作为数组索引访问宿主侧数组",
+      "外部整数作为 iovec 或描述符数组访问数量",
+      "外部整数控制描述符链或批量数组操作"
+    ],
+    "sanitizer": [
+      "idx >= capacity",
+      "idx == 0 || idx >= MAX",
+      "n > MAX",
+      "n >= 1 && n <= MAX",
+      "assert(n >= 1 && n <= MAX)"
+    ],
+    "vulnerable_indicator": "外部整数字段流入数组索引或描述符数组访问，使用点前缺少与数组容量、MAX 常量或有效区间的比较。",
+    "fixed_indicator": "使用点前存在 idx >= MAX、idx == 0、n > MAX 或 assert(n >= 1 && n <= MAX) 等范围守护。",
+    "target_apis": [
+      "XHCI_MAX_ENDPOINTS",
+      "VT9P_MAX_IOV",
+      "VTSCSI_MAXSEG",
+      "vq_getchain"
+    ],
+    "negative_examples": [
+      "索引值来自固定枚举或内部循环计数，且循环边界由数组长度控制。",
+      "数组访问前已有等价的 min/max 范围检查。",
+      "整数只参与日志输出或错误码设置，不控制数组、iovec 或描述符访问。"
+    ]
+  },
+  "member_instances": [
+    {
+      "cve": "CVE-2018-17161",
+      "source_sa": "FreeBSD-SA-18:15",
+      "subsystem": "bootpd",
+      "split": "train",
+      "files": [
+        "libexec/bootpd/bootpd.c"
+      ],
+      "expected_function": "handle_request",
+      "fix_commits": [
+        "e848f793a3853cf43926046c8be339703c79833e"
+      ],
+      "patch_granularity": "single_commit",
+      "evidence_mode": "exact_patch",
+      "requires_review": false,
+      "source": "BOOTP 请求包中的 bp_htype 字段",
+      "sink": "hwaddr[bp->bp_htype] 数组访问 / hwinfocnt",
+      "sanitizer": "if (bp->bp_htype >= hwinfocnt)",
+      "grounding": "PASS_STRICT"
+    },
+    {
+      "cve": "CVE-2019-5604",
+      "source_sa": "FreeBSD-SA-19:16",
+      "subsystem": "bhyve",
+      "split": "train",
+      "files": [
+        "usr.sbin/bhyve/pci_xhci.c"
+      ],
+      "expected_function": "pci_xhci_device_doorbell",
+      "fix_commits": [
+        "76e7c1980e78c74b0c2b3b1e83036d88a10878ad"
+      ],
+      "patch_granularity": "single_commit",
+      "evidence_mode": "exact_patch",
+      "requires_review": false,
+      "source": "VM 访客通过 PCI MMIO 写入 XHCI Doorbell 寄存器的 epid 字段",
+      "sink": "dev->eps[epid] 数组访问",
+      "sanitizer": "if (epid == 0 || epid >= XHCI_MAX_ENDPOINTS)",
+      "grounding": "PASS_STRICT"
+    },
+    {
+      "cve": "CVE-2021-29631",
+      "source_sa": "FreeBSD-SA-21:13",
+      "subsystem": "bhyve",
+      "split": "train",
+      "files": [
+        "usr.sbin/bhyve/pci_virtio_9p.c"
+      ],
+      "expected_function": "pci_vt9p_notify",
+      "fix_commits": [
+        "ec08bc89d4b3a94ff676e8e9ce6663508f18148b",
+        "20f96f215562c7533053e01b186066ad935d11d0"
+      ],
+      "patch_granularity": "single_commit",
+      "evidence_mode": "exact_patch",
+      "requires_review": false,
+      "source": "VM 访客通过 VirtIO 描述符环传入的 iovec 链长度",
+      "sink": "vq_getchain 返回值控制 iov[] 数组使用",
+      "sanitizer": "assert(n >= 1 && n <= VT9P_MAX_IOV)",
+      "grounding": "PASS_STRICT"
+    }
+  ],
+  "ruleagent_constraints": [
+    "不要写死单个 CVE、单个函数或单个路径。",
+    "优先报告数组访问、描述符数组访问或 iovec 使用点。",
+    "第一版优先函数内检测。",
+    "fixed guard 中的 assert 应作为 sanitizer 识别。"
+  ],
+  "validation_plan": {
+    "compile": "codeql query compile",
+    "recall_targets": [
+      "CVE-2018-17161 vulnerable version should report handle_request or equivalent bp_htype array use",
+      "CVE-2019-5604 vulnerable version should report pci_xhci_device_doorbell or equivalent epid endpoint array use",
+      "CVE-2021-29631 vulnerable version should report pci_vt9p_notify or equivalent vq_getchain/iov use"
+    ],
+    "fixed_false_positive_targets": [
+      "Corresponding fixed versions should not report the same guarded locations"
+    ]
+  }
+}
