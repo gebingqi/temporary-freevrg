@@ -9,126 +9,182 @@
  */
 
 import cpp
+import semmle.code.cpp.commons.Assertions
 
-predicate sameFunction(Expr source, Element useSite) {
-  exists(Expr e |
-    useSite = e and
-    source.getEnclosingFunction() = e.getEnclosingFunction()
-  )
+Function enclosingFunction(Element e) {
+  exists(Expr expr | e = expr and result = expr.getEnclosingFunction())
   or
-  exists(Stmt s |
-    useSite = s and
-    source.getEnclosingFunction() = s.getEnclosingFunction()
-  )
+  exists(Stmt stmt | e = stmt and result = stmt.getEnclosingFunction())
 }
 
-predicate beforeUse(Element guard, Element useSite) {
+predicate beforeUse(Locatable guard, Element useSite) {
   guard.getLocation().getFile() = useSite.getLocation().getFile() and
   guard.getLocation().getStartLine() <= useSite.getLocation().getStartLine()
 }
 
-predicate textMentions(Element e, Expr value) {
-  e.toString().matches("%" + value.toString() + "%")
-}
-
-predicate nameLooksLikeExternalIndexOrCount(Expr e) {
-  e.toString().regexpMatch("(?i).*(idx|index|epid|htype|count|cnt|num|len|iov).*")
-}
-
-predicate isPacketOrGuestField(Expr e) {
-  e.toString().matches("%->%") or
-  e.toString().matches("%.%" )
-}
-
-predicate isAssignedFromDescriptorChain(Expr e) {
-  exists(AssignExpr assign, FunctionCall call |
-    assign.getLValue().toString() = e.toString() and
-    assign.getRValue() = call and
-    call.getTarget().hasName("vq_getchain") and
-    assign.getEnclosingFunction() = e.getEnclosingFunction()
+predicate accessesVariable(Expr tree, Variable value) {
+  exists(VariableAccess access |
+    tree.getAChild*() = access and
+    access.getTarget() = value
   )
 }
 
-predicate isExternalInteger(Expr e) {
-  isPacketOrGuestField(e) or
-  nameLooksLikeExternalIndexOrCount(e) or
-  isAssignedFromDescriptorChain(e)
+predicate isIntegralVariable(Variable value) {
+  value.getType().getUnspecifiedType() instanceof IntegralType
 }
 
-predicate isArrayIndexUse(Expr idx, Element useSite) {
+predicate nameLooksLikeExternalIndexOrCount(Variable value) {
+  value.getName().regexpMatch("(?i).*(idx|index|epid|htype|count|cnt|num|len|iov).*")
+}
+
+predicate isAssignedFromDescriptorChain(Variable value, Function function) {
+  exists(AssignExpr assign, VariableAccess lhs, FunctionCall call |
+    assign.getEnclosingFunction() = function and
+    assign.getLValue() = lhs and
+    lhs.getTarget() = value and
+    assign.getRValue().getAChild*() = call and
+    call.getTarget().getName().regexpMatch("(?i).*(vq_getchain|virtqueue.*chain).*")
+  )
+}
+
+predicate isExternalInteger(Variable value, Function function) {
+  isIntegralVariable(value) and
+  (
+    nameLooksLikeExternalIndexOrCount(value) or
+    isAssignedFromDescriptorChain(value, function)
+  )
+}
+
+predicate isArrayIndexUse(Variable value, Element useSite) {
   exists(ArrayExpr access |
     useSite = access and
-    idx = access.getArrayOffset()
+    accessesVariable(access.getArrayOffset(), value)
   )
 }
 
-predicate isDescriptorSensitiveCall(Expr idx, Element useSite) {
-  exists(FunctionCall call, int i |
-    useSite = call and
-    idx = call.getArgument(i) and
+predicate loopContainsArrayOrDescriptorUse(Loop loop) {
+  exists(ArrayExpr access |
+    access.getEnclosingStmt() = loop.getStmt() or
+    access.getEnclosingStmt().getEnclosingBlock() = loop.getStmt()
+  )
+  or
+  exists(FunctionCall call |
     (
-      call.getTarget().getName().regexpMatch("(?i).*(iov|desc|chain|vq|virtqueue).*") or
-      call.toString().regexpMatch("(?i).*(iov|desc|chain|vq|virtqueue).*")
-    )
+      call.getEnclosingStmt() = loop.getStmt() or
+      call.getEnclosingStmt().getEnclosingBlock() = loop.getStmt()
+    ) and
+    call.getTarget().getName().regexpMatch("(?i).*(iov|desc|chain|virtqueue|readv|writev|buf_to|to_buf).*")
   )
 }
 
-predicate isDescriptorLoopUse(Expr idx, Element useSite) {
+predicate isDescriptorLoopUse(Variable value, Element useSite) {
   exists(Loop loop |
     useSite = loop and
-    textMentions(loop, idx) and
-    loop.toString().regexpMatch("(?i).*(iov|desc|chain|vq|eps).*")
+    accessesVariable(loop.getCondition(), value) and
+    loopContainsArrayOrDescriptorUse(loop)
   )
 }
 
-predicate isDescriptorAssignmentUse(Expr idx, Element useSite) {
-  exists(AssignExpr assign |
-    useSite = assign and
-    textMentions(assign, idx) and
-    assign.toString().regexpMatch("(?i).*(iov|desc|chain|vq|eps).*")
+predicate isDescriptorSensitiveCall(Variable value, Element useSite) {
+  exists(FunctionCall call, Expr argument |
+    useSite = call and
+    argument = call.getAnArgument() and
+    accessesVariable(argument, value) and
+    call.getTarget().getName().regexpMatch("(?i).*(iov|desc|readv|writev|buf_to|to_buf).*") and
+    not call.getTarget().getName().regexpMatch("(?i).*(vq_getchain|virtqueue.*chain).*")
   )
 }
 
-predicate isDangerousUse(Expr idx, Element useSite) {
-  isArrayIndexUse(idx, useSite) or
-  isDescriptorSensitiveCall(idx, useSite) or
-  isDescriptorLoopUse(idx, useSite) or
-  isDescriptorAssignmentUse(idx, useSite)
+predicate isDangerousUse(Variable value, Element useSite) {
+  isArrayIndexUse(value, useSite) or
+  isDescriptorLoopUse(value, useSite) or
+  isDescriptorSensitiveCall(value, useSite)
 }
 
-predicate isRangeCheckFor(Expr cond, Expr idx) {
-  textMentions(cond, idx) and
+predicate isUpperBoundViolation(RelationalOperation comparison, Variable value) {
   (
-    cond.toString().matches("%>=%") or
-    cond.toString().matches("%>%") or
-    cond.toString().matches("%<=%") or
-    cond.toString().matches("%<%") or
-    cond.toString().matches("%== 0%") or
-    cond.toString().matches("%==0%")
+    accessesVariable(comparison.getLeftOperand(), value) and
+    not accessesVariable(comparison.getRightOperand(), value) and
+    comparison.getOperator() = [">=", ">"]
+  )
+  or
+  (
+    accessesVariable(comparison.getRightOperand(), value) and
+    not accessesVariable(comparison.getLeftOperand(), value) and
+    comparison.getOperator() = ["<=", "<"]
   )
 }
 
-predicate hasRelevantGuard(Expr idx, Element useSite) {
-  exists(IfStmt ifs |
-    sameFunction(idx, ifs) and
-    beforeUse(ifs, useSite) and
-    isRangeCheckFor(ifs.getCondition(), idx)
+predicate isValidUpperBound(RelationalOperation comparison, Variable value) {
+  (
+    accessesVariable(comparison.getLeftOperand(), value) and
+    not accessesVariable(comparison.getRightOperand(), value) and
+    comparison.getOperator() = ["<=", "<"]
+  )
+  or
+  (
+    accessesVariable(comparison.getRightOperand(), value) and
+    not accessesVariable(comparison.getLeftOperand(), value) and
+    comparison.getOperator() = [">=", ">"]
+  )
+}
+
+predicate containsUpperBoundViolation(Expr condition, Variable value) {
+  exists(RelationalOperation comparison |
+    condition.getAChild*() = comparison and
+    isUpperBoundViolation(comparison, value)
+  )
+}
+
+predicate containsValidUpperBound(Expr condition, Variable value) {
+  exists(RelationalOperation comparison |
+    condition.getAChild*() = comparison and
+    isValidUpperBound(comparison, value)
+  )
+}
+
+predicate branchReturns(Stmt branch) {
+  branch instanceof ReturnStmt or
+  exists(ReturnStmt ret | branch.getAChild*() = ret)
+}
+
+predicate isInside(Stmt branch, Element useSite) {
+  useSite = branch or branch.getAChild*() = useSite
+}
+
+predicate hasRelevantGuard(Variable value, Element useSite) {
+  exists(IfStmt guard |
+    guard.getEnclosingFunction() = enclosingFunction(useSite) and
+    beforeUse(guard, useSite) and
+    containsUpperBoundViolation(guard.getCondition(), value) and
+    branchReturns(guard.getThen())
+  )
+  or
+  exists(IfStmt guard |
+    guard.getEnclosingFunction() = enclosingFunction(useSite) and
+    containsValidUpperBound(guard.getCondition(), value) and
+    isInside(guard.getThen(), useSite)
+  )
+  or
+  exists(Assertion assertion |
+    assertion.getAsserted().getEnclosingFunction() = enclosingFunction(useSite) and
+    beforeUse(assertion, useSite) and
+    containsValidUpperBound(assertion.getAsserted(), value)
   )
   or
   exists(FunctionCall assertCall |
-    sameFunction(idx, assertCall) and
+    assertCall.getEnclosingFunction() = enclosingFunction(useSite) and
     beforeUse(assertCall, useSite) and
     assertCall.getTarget().hasName("assert") and
-    isRangeCheckFor(assertCall, idx)
+    containsValidUpperBound(assertCall.getArgument(0), value)
   )
 }
 
-from Expr idx, Element useSite
+from Variable value, Element useSite
 where
-  isExternalInteger(idx) and
-  isDangerousUse(idx, useSite) and
-  sameFunction(idx, useSite) and
-  not hasRelevantGuard(idx, useSite)
+  isExternalInteger(value, enclosingFunction(useSite)) and
+  isDangerousUse(value, useSite) and
+  not hasRelevantGuard(value, useSite)
 select useSite,
-  "Externally controlled index or descriptor count '" + idx.toString() +
+  "Externally controlled index or descriptor count '" + value.getName() +
   "' is used without an apparent upper-bound or valid-range guard."
