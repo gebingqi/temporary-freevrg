@@ -21,18 +21,23 @@ class LLMRequest:
 
 
 class LLMGateway:
-    def invoke(self, request: LLMRequest) -> str | None:
+    def invoke(self, request: LLMRequest, *, callback_handler: object | None = None) -> str | None:
         backend = request.profile.backend.strip().lower()
         if backend == "mock":
             return None
         if backend == "openai-compatible":
-            return self._invoke_openai_compatible(request)
+            return self._invoke_openai_compatible(request, callback_handler=callback_handler)
         raise ValueError(
             f"Unsupported LLM_BACKEND={request.profile.backend!r}. "
             "Supported values: mock, openai-compatible."
         )
 
-    def _invoke_openai_compatible(self, request: LLMRequest) -> str:
+    def _invoke_openai_compatible(
+        self,
+        request: LLMRequest,
+        *,
+        callback_handler: object | None = None,
+    ) -> str:
         if ChatOpenAI is None or SystemMessage is None or HumanMessage is None:
             raise RuntimeError(
                 "langchain_openai/langchain_core is not installed, but "
@@ -45,11 +50,18 @@ class LLMGateway:
             temperature=request.profile.temperature,
             timeout=request.profile.timeout_seconds,
         )
+        invoke_config = None
+        if callback_handler is not None:
+            invoke_config = {
+                "callbacks": [callback_handler],
+                "run_name": "llm-generation",
+            }
         response = client.invoke(
             [
                 SystemMessage(content=request.system_prompt),
                 HumanMessage(content=request.user_prompt),
-            ]
+            ],
+            config=invoke_config,
         )
         content = getattr(response, "content", "")
         if isinstance(content, str):

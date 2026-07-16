@@ -6,13 +6,14 @@ import re
 from agents.base import BaseAgent
 from core.config import AppConfig
 from core.models import ValidationResult
+from core.observability import Observability
 
 
 class RuleAgent(BaseAgent):
     """Generate CodeQL rules from pattern documents."""
 
-    def __init__(self, config: AppConfig) -> None:
-        super().__init__(config, Path("prompts/rule_agent.md"), "rule")
+    def __init__(self, config: AppConfig, observability: Observability | None = None) -> None:
+        super().__init__(config, Path("prompts/rule_agent.md"), "rule", observability)
 
     def generate_rule(
         self,
@@ -21,32 +22,51 @@ class RuleAgent(BaseAgent):
         validation_feedback: ValidationResult | None = None,
         attempt: int = 0,
     ) -> str:
-        model_output = self.invoke_model(
-            user_prompt=self._build_user_prompt(
-                pattern_text,
-                validation_feedback=validation_feedback,
-                attempt=attempt,
+        with self.observation(
+            name="generate-rule",
+            as_type="span",
+            input_payload={
+                "attempt": attempt,
+                "has_validation_feedback": validation_feedback is not None,
+            },
+            metadata={
+                "agent": "rule",
+                "backend": self.profile.backend,
+                "model": self.profile.model,
+                "attempt": attempt,
+            },
+        ) as observation:
+            model_output = self.invoke_model(
+                user_prompt=self._build_user_prompt(
+                    pattern_text,
+                    validation_feedback=validation_feedback,
+                    attempt=attempt,
+                )
             )
-        )
-        if model_output:
-            return model_output.strip() + "\n"
+            if model_output:
+                output = model_output.strip() + "\n"
+                observation.update(
+                    output=output,
+                    metadata={"agent": "rule", "execution_mode": "llm", "attempt": attempt},
+                )
+                return output
 
-        pattern_name = self._extract_pattern_name(pattern_text)
-        predicate_name = self._to_predicate_name(pattern_name)
-        sink_names = self._extract_structured_items(pattern_text, "sink")
-        source_names = self._extract_structured_items(pattern_text, "source")
-        sanitizer_names = self._extract_structured_items(pattern_text, "sanitizer")
-        description = self._extract_description(pattern_text)
+            pattern_name = self._extract_pattern_name(pattern_text)
+            predicate_name = self._to_predicate_name(pattern_name)
+            sink_names = self._extract_structured_items(pattern_text, "sink")
+            source_names = self._extract_structured_items(pattern_text, "source")
+            sanitizer_names = self._extract_structured_items(pattern_text, "sanitizer")
+            description = self._extract_description(pattern_text)
 
-        sink_predicate = self._build_name_predicate("isPatternSinkName", sink_names)
-        source_predicate = self._build_name_predicate("isPatternSourceHint", source_names)
-        sanitizer_predicate = self._build_name_predicate(
-            "isPatternSanitizerHint", sanitizer_names
-        )
-        feedback_block = self._format_feedback(validation_feedback)
-        metadata_description = description.replace("*/", "* /")
+            sink_predicate = self._build_name_predicate("isPatternSinkName", sink_names)
+            source_predicate = self._build_name_predicate("isPatternSourceHint", source_names)
+            sanitizer_predicate = self._build_name_predicate(
+                "isPatternSanitizerHint", sanitizer_names
+            )
+            feedback_block = self._format_feedback(validation_feedback)
+            metadata_description = description.replace("*/", "* /")
 
-        return f"""import cpp
+            output = f"""import cpp
 
 /**
  * @name {pattern_name}
@@ -87,6 +107,15 @@ Generation attempt: {attempt}
 {feedback_block}
 */
 """
+            observation.update(
+                output=output,
+                metadata={
+                    "agent": "rule",
+                    "execution_mode": "local-fallback",
+                    "attempt": attempt,
+                },
+            )
+            return output
 
     def _extract_pattern_name(self, pattern_text: str) -> str:
         match = re.search(r"^# Pattern:\s+(.+)$", pattern_text, flags=re.MULTILINE)

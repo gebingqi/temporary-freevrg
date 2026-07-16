@@ -1,72 +1,94 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from agents.base import BaseAgent
 from core.config import AppConfig
 from core.models import SampleRecord, compact_text, slugify
+from core.observability import Observability
 
 
 class PatternAgent(BaseAgent):
     """Generate reusable vulnerability patterns from structured samples."""
 
-    def __init__(self, config: AppConfig) -> None:
-        super().__init__(config, Path("prompts/pattern_agent.md"), "pattern")
+    def __init__(self, config: AppConfig, observability: Observability | None = None) -> None:
+        super().__init__(config, Path("prompts/pattern_agent.md"), "pattern", observability)
 
     def generate_pattern(self, sample: SampleRecord) -> str:
-        model_output = self.invoke_model(user_prompt=self._build_user_prompt(sample))
-        if model_output:
-            return model_output.strip() + "\n"
+        with self.observation(
+            name="generate-pattern",
+            as_type="span",
+            input_payload={"sample_id": sample.sample_id, "source_path": sample.source_path},
+            metadata={
+                "agent": "pattern",
+                "backend": self.profile.backend,
+                "model": self.profile.model,
+            },
+        ) as observation:
+            model_output = self.invoke_model(user_prompt=self._build_user_prompt(sample))
+            if model_output:
+                output = model_output.strip() + "\n"
+                observation.update(
+                    output=output,
+                    metadata={"agent": "pattern", "execution_mode": "llm"},
+                )
+                return output
 
-        advisory_text = sample.text_field(
-            "advisory_text",
-            default="Historical vulnerability sample imported into the pipeline.",
-        )
-        first_sentence = advisory_text.split(". ")[0].strip()
-        description = first_sentence if first_sentence else advisory_text
+            advisory_text = sample.text_field(
+                "advisory_text",
+                default="Historical vulnerability sample imported into the pipeline.",
+            )
+            first_sentence = advisory_text.split(". ")[0].strip()
+            description = first_sentence if first_sentence else advisory_text
 
-        files_changed = sample.list_field("files_changed")
-        cve_values = sample.list_field("cve")
-        cwe_values = sample.list_field("cwe")
-        pattern_name = slugify(sample.pattern_name())
+            files_changed = sample.list_field("files_changed")
+            cve_values = sample.list_field("cve")
+            cwe_values = sample.list_field("cwe")
+            pattern_name = slugify(sample.pattern_name())
 
-        source_candidates = self._infer_source_candidates(sample)
-        sink_candidates = self._infer_sink_candidates(sample)
-        sanitizer_candidates = self._infer_sanitizer_candidates(sample)
+            source_candidates = self._infer_source_candidates(sample)
+            sink_candidates = self._infer_sink_candidates(sample)
+            sanitizer_candidates = self._infer_sanitizer_candidates(sample)
 
-        lines = [
-            f"# Pattern: {pattern_name}",
-            "",
-            "## Description",
-            description,
-            "",
-            "## Structured Fields",
-            "source:",
-            *[f"  - {item}" for item in source_candidates],
-            "",
-            "sink:",
-            *[f"  - {item}" for item in sink_candidates],
-            "",
-            "sanitizer:",
-            *[f"  - {item}" for item in sanitizer_candidates],
-            "",
-            f"severity_hint: {'high' if cwe_values else 'medium'}",
-            "",
-            "## Historical Instances",
-            f"- sample_id: {sample.sample_id}",
-            f"- cve: {compact_text(cve_values)}",
-            f"- subsystem: {sample.text_field('subsystem', default='unknown')}",
-            f"- files_changed: {compact_text(files_changed)}",
-            "",
-            "## Agent Context",
-            self.system_prompt,
-            "",
-            "## Normalized Sample Context",
-            "```text",
-            sample.to_prompt_context(),
-            "```",
-        ]
-        return "\n".join(lines).strip() + "\n"
+            lines = [
+                f"# Pattern: {pattern_name}",
+                "",
+                "## Description",
+                description,
+                "",
+                "## Structured Fields",
+                "source:",
+                *[f"  - {item}" for item in source_candidates],
+                "",
+                "sink:",
+                *[f"  - {item}" for item in sink_candidates],
+                "",
+                "sanitizer:",
+                *[f"  - {item}" for item in sanitizer_candidates],
+                "",
+                f"severity_hint: {'high' if cwe_values else 'medium'}",
+                "",
+                "## Historical Instances",
+                f"- sample_id: {sample.sample_id}",
+                f"- cve: {compact_text(cve_values)}",
+                f"- subsystem: {sample.text_field('subsystem', default='unknown')}",
+                f"- files_changed: {compact_text(files_changed)}",
+                "",
+                "## Agent Context",
+                self.system_prompt,
+                "",
+                "## Normalized Sample Context",
+                "```text",
+                sample.to_prompt_context(),
+                "```",
+            ]
+            output = "\n".join(lines).strip() + "\n"
+            observation.update(
+                output=output,
+                metadata={"agent": "pattern", "execution_mode": "local-fallback"},
+            )
+            return output
 
     def _build_user_prompt(self, sample: SampleRecord) -> str:
         return "\n".join(

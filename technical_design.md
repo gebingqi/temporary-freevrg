@@ -167,6 +167,7 @@ RESULTS_DIR=data/results
 - `PATTERN_LLM_*` 和 `RULE_LLM_*` 用于按 Agent 覆盖接口地址、密钥和超时
 - 当前建议支持两类后端：`mock` 与 `openai-compatible`
 - `mock` 模式用于本地原型联调，不依赖真实远端模型调用
+- `LANGFUSE_*` 用于可选的观测接入，建议仅记录 pipeline、agent 和 validation 的 trace/span，不改变现有确定性控制逻辑
 
 建议在代码中提供统一的配置加载模块，由 `Pattern Agent`、`Rule Agent` 和 `Orchestrator` 共享，而不是各自读取环境变量。
 

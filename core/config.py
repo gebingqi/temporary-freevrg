@@ -17,6 +17,11 @@ class LLMProfile:
 
 @dataclass(slots=True)
 class AppConfig:
+    langfuse_enabled: bool
+    langfuse_public_key: str
+    langfuse_secret_key: str
+    langfuse_base_url: str
+    langfuse_timeout_seconds: int
     llm_backend: str
     llm_api_key: str
     llm_base_url: str
@@ -73,17 +78,50 @@ def read_dotenv(env_path: str = ".env") -> dict[str, str]:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        values[key.strip()] = value.strip()
+        cleaned = value.strip()
+        if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {'"', "'"}:
+            cleaned = cleaned[1:-1]
+        values[key.strip()] = cleaned
     return values
+
+
+def apply_runtime_environment(env_values: dict[str, str]) -> None:
+    passthrough_keys = (
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+        "no_proxy",
+    )
+    for key in passthrough_keys:
+        value = env_values.get(key)
+        if value and key not in os.environ:
+            os.environ[key] = value
 
 
 def load_config(env_path: str = ".env") -> AppConfig:
     env_values = read_dotenv(env_path)
+    apply_runtime_environment(env_values)
 
     def get(name: str, default: str) -> str:
         return os.getenv(name, env_values.get(name, default))
 
+    def get_bool(name: str, default: bool) -> bool:
+        raw_value = get(name, "true" if default else "false").strip().lower()
+        return raw_value in {"1", "true", "yes", "on"}
+
     return AppConfig(
+        langfuse_enabled=get_bool("LANGFUSE_ENABLED", True),
+        langfuse_public_key=get("LANGFUSE_PUBLIC_KEY", ""),
+        langfuse_secret_key=get("LANGFUSE_SECRET_KEY", ""),
+        langfuse_base_url=get(
+            "LANGFUSE_BASE_URL",
+            get("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+        ),
+        langfuse_timeout_seconds=int(get("LANGFUSE_TIMEOUT_SECONDS", "5")),
         llm_backend=get("LLM_BACKEND", "mock"),
         llm_api_key=get("LLM_API_KEY", ""),
         llm_base_url=get("LLM_BASE_URL", ""),

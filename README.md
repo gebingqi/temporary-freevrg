@@ -120,8 +120,23 @@ Start from:
 cp .env.example .env
 ```
 
+Install dependencies first:
+
+```bash
+pdm install
+```
+
 Important variables:
 
+- `HTTP_PROXY`
+- `HTTPS_PROXY`
+- `ALL_PROXY`
+- `NO_PROXY`
+- `LANGFUSE_ENABLED`
+- `LANGFUSE_PUBLIC_KEY`
+- `LANGFUSE_SECRET_KEY`
+- `LANGFUSE_BASE_URL`
+- `LANGFUSE_TIMEOUT_SECONDS`
 - `LLM_BACKEND`: `mock` or `openai-compatible`
 - `LLM_API_KEY`
 - `LLM_BASE_URL`
@@ -147,6 +162,45 @@ Configuration behavior:
 - `PATTERN_LLM_*` overrides only `Pattern Agent`
 - `RULE_LLM_*` overrides only `Rule Agent`
 - If `LLM_BACKEND=mock`, the pipeline uses deterministic local fallback generation instead of calling a remote model
+- `Langfuse` is optional and used only for observability; it does not change validation decisions or workflow control
+- Proxy variables can be set in `.env`; they are injected into the runtime environment on startup
+
+Minimal real-run `.env` example:
+
+```dotenv
+LLM_BACKEND=openai-compatible
+LLM_API_KEY=<your-model-api-key>
+LLM_BASE_URL=https://api.deepseek.com
+
+LANGFUSE_ENABLED=true
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+
+HTTP_PROXY=http://127.0.0.1:7897
+HTTPS_PROXY=http://127.0.0.1:7897
+ALL_PROXY=http://127.0.0.1:7897
+NO_PROXY=127.0.0.1,localhost
+
+PATTERN_MODEL=deepseek-v4-pro
+RULE_MODEL=deepseek-v4-pro
+```
+
+Langfuse setup:
+
+- Langfuse website: `https://langfuse.com`
+- Langfuse Cloud console: `https://cloud.langfuse.com`
+- Create `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` in your Langfuse project settings / API keys page
+- Set `LANGFUSE_BASE_URL` to your Langfuse server URL
+  - Cloud EU: `https://cloud.langfuse.com`
+  - For another region or self-hosted deployment, use that server URL instead
+
+What this project sends to Langfuse:
+
+- one root pipeline trace per sample run
+- step-level observations such as `generate-pattern`, `generate-rule`, and `validate-rule`
+- real LangChain/OpenAI-compatible model calls as Langfuse `generation` observations
+- validation metadata such as compile mode and repair outcome
 
 ## Technology Choices
 
@@ -165,13 +219,19 @@ The boundaries are explicit:
 
 ## Quick Start
 
-1. Copy `.env.example` to `.env`
-2. Fill in model and API settings
-3. Put a structured sample file into `data/samples/`
-4. Run:
+1. Install dependencies:
 
 ```bash
-python main.py data/samples/<sample-file>
+pdm install
+```
+
+2. Copy `.env.example` to `.env`
+3. Fill in model, Langfuse, and optional proxy settings
+4. Put a structured sample file into `data/samples/`
+5. Run:
+
+```bash
+pdm run python main.py data/samples/<sample-file>
 ```
 
 The current pipeline will:
@@ -180,6 +240,20 @@ The current pipeline will:
 - generate a pattern file
 - generate a `.ql` file
 - write a placeholder validation result
+
+To inspect traces in Langfuse:
+
+1. Open `https://cloud.langfuse.com`
+2. Open your project
+3. Go to the Traces view
+4. Look for traces such as `run-sample-pipeline`
+
+If traces do not appear:
+
+- verify `LANGFUSE_ENABLED=true`
+- verify `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL`
+- verify your model endpoint and Langfuse server are reachable directly or through your configured proxy
+- for short-lived scripts, make sure the application reaches its normal shutdown/flush path
 
 ## Notes
 

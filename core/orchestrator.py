@@ -7,6 +7,7 @@ from agents.pattern_agent import PatternAgent
 from agents.rule_agent import RuleAgent
 from core.config import AppConfig, ensure_directories
 from core.models import SampleRecord, ValidationResult, WorkflowState
+from core.observability import Observability
 from core.validator import Validator
 
 try:
@@ -22,20 +23,53 @@ class Orchestrator:
 
     def __init__(self, config: AppConfig) -> None:
         self.config = config
-        self.pattern_agent = PatternAgent(config)
-        self.rule_agent = RuleAgent(config)
+        self.observability = Observability(config)
+        self.pattern_agent = PatternAgent(config, self.observability)
+        self.rule_agent = RuleAgent(config, self.observability)
         self.validator = Validator(config)
         self.graph = self._build_graph()
 
     def run_for_sample(self, sample_path: Path) -> dict[str, str]:
         ensure_directories(self.config)
+        sample = SampleRecord.from_path(sample_path)
         initial_state: WorkflowState = {
             "sample_path": sample_path,
+            "sample": sample,
             "repair_round": 0,
             "max_repair_rounds": self.config.max_repair_rounds,
         }
-        final_state = self.graph.invoke(initial_state)
-        return self._build_outputs(final_state)
+        with self.observability.observation(
+            name="run-sample-pipeline",
+            as_type="span",
+            input_payload={
+                "sample_id": sample.sample_id,
+                "cve": sample.list_field("cve"),
+                "subsystem": sample.text_field("subsystem", default="unknown"),
+                "sample_path": sample_path,
+                "max_repair_rounds": self.config.max_repair_rounds,
+            },
+            metadata={
+                "langgraph_available": StateGraph is not None,
+                "pattern_backend": self.pattern_agent.profile.backend,
+                "rule_backend": self.rule_agent.profile.backend,
+            },
+        ) as observation:
+            try:
+                final_state = self.graph.invoke(initial_state)
+                outputs = self._build_outputs(final_state)
+                validation: ValidationResult = final_state["validation"]
+                observation.update(
+                    output=outputs,
+                    metadata={
+                        "final_repair_round": final_state.get("repair_round", 0),
+                        "validation_mode": validation.validation_mode,
+                        "compile_ok": validation.compile_ok,
+                        "should_repair": validation.should_repair,
+                    },
+                )
+                return outputs
+            finally:
+                self.observability.flush()
 
     def _build_graph(self) -> Any:
         if StateGraph is None:
@@ -62,9 +96,12 @@ class Orchestrator:
         return graph.compile()
 
     def _load_sample(self, state: WorkflowState) -> WorkflowState:
-        sample_path = Path(state["sample_path"])
-        sample = SampleRecord.from_path(sample_path)
+        sample = state.get("sample")
+        if sample is None:
+            sample_path = Path(state["sample_path"])
+            sample = SampleRecord.from_path(sample_path)
         return {
+            **state,
             "sample": sample,
             "artifact_stem": sample.slug,
         }
@@ -75,6 +112,7 @@ class Orchestrator:
         pattern_path = self.config.patterns_dir / f"{state['artifact_stem']}.md"
         pattern_path.write_text(pattern_text, encoding="utf-8")
         return {
+            **state,
             "pattern_text": pattern_text,
             "pattern_path": pattern_path,
         }
@@ -91,22 +129,41 @@ class Orchestrator:
         rule_path = self.config.rules_dir / f"{state['artifact_stem']}.ql"
         rule_path.write_text(rule_text, encoding="utf-8")
         return {
+            **state,
             "rule_text": rule_text,
             "rule_path": rule_path,
         }
 
     def _validate_rule(self, state: WorkflowState) -> WorkflowState:
         rule_path = Path(state["rule_path"])
-        validation = self.validator.validate_rule(rule_path)
-        result_path = self.validator.write_result(validation)
-        repair_round = int(state.get("repair_round", 0))
-        if validation.should_repair:
-            repair_round += 1
-        return {
-            "validation": validation,
-            "result_path": result_path,
-            "repair_round": repair_round,
-        }
+        with self.observability.observation(
+            name="validate-rule",
+            as_type="tool",
+            input_payload={"rule_path": rule_path},
+            metadata={"repair_round": state.get("repair_round", 0)},
+        ) as observation:
+            validation = self.validator.validate_rule(rule_path)
+            result_path = self.validator.write_result(validation)
+            repair_round = int(state.get("repair_round", 0))
+            if validation.should_repair:
+                repair_round += 1
+            observation.update(
+                output={
+                    "result_path": result_path,
+                    "validation": validation.to_dict(),
+                },
+                metadata={
+                    "validation_mode": validation.validation_mode,
+                    "compile_ok": validation.compile_ok,
+                    "should_repair": validation.should_repair,
+                },
+            )
+            return {
+                **state,
+                "validation": validation,
+                "result_path": result_path,
+                "repair_round": repair_round,
+            }
 
     def _next_after_validation(self, state: WorkflowState) -> str:
         validation: ValidationResult = state["validation"]

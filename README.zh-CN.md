@@ -127,8 +127,23 @@ FreeVRG/
 cp .env.example .env
 ```
 
+建议先安装依赖：
+
+```bash
+pdm install
+```
+
 重要变量包括：
 
+- `HTTP_PROXY`
+- `HTTPS_PROXY`
+- `ALL_PROXY`
+- `NO_PROXY`
+- `LANGFUSE_ENABLED`
+- `LANGFUSE_PUBLIC_KEY`
+- `LANGFUSE_SECRET_KEY`
+- `LANGFUSE_BASE_URL`
+- `LANGFUSE_TIMEOUT_SECONDS`
 - `LLM_BACKEND`：当前支持 `mock` 或 `openai-compatible`
 - `LLM_API_KEY`
 - `LLM_BASE_URL`
@@ -154,6 +169,45 @@ cp .env.example .env
 - `PATTERN_LLM_*` 仅覆盖 `Pattern Agent`
 - `RULE_LLM_*` 仅覆盖 `Rule Agent`
 - 当 `LLM_BACKEND=mock` 时，流程不会请求远端模型，而是走本地确定性 fallback 生成逻辑
+- `Langfuse` 是可选观测层，只记录 trace / span / generation，不参与验证决策和流程控制
+- 代理变量可以写进 `.env`；项目启动时会自动注入运行环境
+
+一个可直接参考的真实运行 `.env` 示例：
+
+```dotenv
+LLM_BACKEND=openai-compatible
+LLM_API_KEY=<你的模型 API Key>
+LLM_BASE_URL=https://api.deepseek.com
+
+LANGFUSE_ENABLED=true
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+
+HTTP_PROXY=http://127.0.0.1:7897
+HTTPS_PROXY=http://127.0.0.1:7897
+ALL_PROXY=http://127.0.0.1:7897
+NO_PROXY=127.0.0.1,localhost
+
+PATTERN_MODEL=deepseek-v4-pro
+RULE_MODEL=deepseek-v4-pro
+```
+
+Langfuse 使用说明：
+
+- Langfuse 官网：`https://langfuse.com`
+- Langfuse Cloud 控制台：`https://cloud.langfuse.com`
+- `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` 需要在 Langfuse 项目的 API Keys 页面创建
+- `LANGFUSE_BASE_URL` 应填写你的 Langfuse 服务地址
+  - Cloud EU：`https://cloud.langfuse.com`
+  - 如果你使用其他区域或自建 Langfuse，请改成对应服务地址
+
+当前项目会发送到 Langfuse 的内容：
+
+- 每个样本运行一条根 trace
+- `generate-pattern`、`generate-rule`、`validate-rule` 等步骤级 observation
+- 真实 LangChain / OpenAI-compatible 模型调用的 `generation`
+- 编译模式、repair 结果等验证元数据
 
 ## 技术选型
 
@@ -172,13 +226,19 @@ cp .env.example .env
 
 ## 快速开始
 
-1. 将 `.env.example` 复制为 `.env`
-2. 填写模型与 API 配置
-3. 将结构化样本文件放入 `data/samples/`
-4. 执行：
+1. 安装依赖：
 
 ```bash
-python main.py data/samples/<sample-file>
+pdm install
+```
+
+2. 将 `.env.example` 复制为 `.env`
+3. 填写模型、Langfuse 和可选代理配置
+4. 将结构化样本文件放入 `data/samples/`
+5. 执行：
+
+```bash
+pdm run python main.py data/samples/<sample-file>
 ```
 
 当前流程会：
@@ -187,6 +247,20 @@ python main.py data/samples/<sample-file>
 - 生成一个 pattern 文件
 - 生成一个 `.ql` 文件
 - 写入一个占位的校验结果
+
+查看 Langfuse trace：
+
+1. 打开 `https://cloud.langfuse.com`
+2. 进入你的项目
+3. 打开 Traces 页面
+4. 查找类似 `run-sample-pipeline` 的 trace
+
+如果 trace 没出现：
+
+- 检查 `LANGFUSE_ENABLED=true`
+- 检查 `LANGFUSE_PUBLIC_KEY`、`LANGFUSE_SECRET_KEY`、`LANGFUSE_BASE_URL`
+- 检查模型接口和 Langfuse 服务是否能直连，或代理是否配置正确
+- 对于短生命周期脚本，确认程序能走到正常 flush 收尾
 
 ## 说明
 
