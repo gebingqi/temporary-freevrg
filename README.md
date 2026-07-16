@@ -122,14 +122,31 @@ cp .env.example .env
 
 Important variables:
 
+- `LLM_BACKEND`: `mock` or `openai-compatible`
 - `LLM_API_KEY`
 - `LLM_BASE_URL`
+- `LLM_TIMEOUT_SECONDS`
+- `PATTERN_LLM_BACKEND`: optional override for `Pattern Agent`
+- `PATTERN_LLM_API_KEY`
+- `PATTERN_LLM_BASE_URL`
+- `PATTERN_LLM_TIMEOUT_SECONDS`
+- `RULE_LLM_BACKEND`: optional override for `Rule Agent`
+- `RULE_LLM_API_KEY`
+- `RULE_LLM_BASE_URL`
+- `RULE_LLM_TIMEOUT_SECONDS`
 - `PATTERN_MODEL`
 - `RULE_MODEL`
 - `PATTERN_TEMPERATURE`
 - `RULE_TEMPERATURE`
 - `MAX_REPAIR_ROUNDS`
 - `CODEQL_PATH`
+
+Configuration behavior:
+
+- Global `LLM_*` values are the default profile for both agents
+- `PATTERN_LLM_*` overrides only `Pattern Agent`
+- `RULE_LLM_*` overrides only `Rule Agent`
+- If `LLM_BACKEND=mock`, the pipeline uses deterministic local fallback generation instead of calling a remote model
 
 ## Technology Choices
 

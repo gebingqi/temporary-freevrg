@@ -131,8 +131,20 @@ project/
 建议至少包含以下配置：
 
 ```dotenv
+LLM_BACKEND=mock
 LLM_API_KEY=
 LLM_BASE_URL=
+LLM_TIMEOUT_SECONDS=60
+
+PATTERN_LLM_BACKEND=
+PATTERN_LLM_API_KEY=
+PATTERN_LLM_BASE_URL=
+PATTERN_LLM_TIMEOUT_SECONDS=
+
+RULE_LLM_BACKEND=
+RULE_LLM_API_KEY=
+RULE_LLM_BASE_URL=
+RULE_LLM_TIMEOUT_SECONDS=
 
 PATTERN_MODEL=gpt-4.1
 RULE_MODEL=gpt-4.1
@@ -148,6 +160,13 @@ PATTERNS_DIR=data/patterns
 RULES_DIR=data/rules
 RESULTS_DIR=data/results
 ```
+
+其中：
+
+- 全局 `LLM_*` 是默认接口配置
+- `PATTERN_LLM_*` 和 `RULE_LLM_*` 用于按 Agent 覆盖接口地址、密钥和超时
+- 当前建议支持两类后端：`mock` 与 `openai-compatible`
+- `mock` 模式用于本地原型联调，不依赖真实远端模型调用
 
 建议在代码中提供统一的配置加载模块，由 `Pattern Agent`、`Rule Agent` 和 `Orchestrator` 共享，而不是各自读取环境变量。
 

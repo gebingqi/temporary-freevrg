@@ -129,14 +129,31 @@ cp .env.example .env
 
 重要变量包括：
 
+- `LLM_BACKEND`：当前支持 `mock` 或 `openai-compatible`
 - `LLM_API_KEY`
 - `LLM_BASE_URL`
+- `LLM_TIMEOUT_SECONDS`
+- `PATTERN_LLM_BACKEND`：`Pattern Agent` 的可选覆盖配置
+- `PATTERN_LLM_API_KEY`
+- `PATTERN_LLM_BASE_URL`
+- `PATTERN_LLM_TIMEOUT_SECONDS`
+- `RULE_LLM_BACKEND`：`Rule Agent` 的可选覆盖配置
+- `RULE_LLM_API_KEY`
+- `RULE_LLM_BASE_URL`
+- `RULE_LLM_TIMEOUT_SECONDS`
 - `PATTERN_MODEL`
 - `RULE_MODEL`
 - `PATTERN_TEMPERATURE`
 - `RULE_TEMPERATURE`
 - `MAX_REPAIR_ROUNDS`
 - `CODEQL_PATH`
+
+配置规则：
+
+- 全局 `LLM_*` 作为两个 Agent 的默认模型接口配置
+- `PATTERN_LLM_*` 仅覆盖 `Pattern Agent`
+- `RULE_LLM_*` 仅覆盖 `Rule Agent`
+- 当 `LLM_BACKEND=mock` 时，流程不会请求远端模型，而是走本地确定性 fallback 生成逻辑
 
 ## 技术选型
 

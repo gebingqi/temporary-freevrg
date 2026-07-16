@@ -22,6 +22,7 @@ def main() -> None:
     orchestrator = Orchestrator(config)
     outputs = orchestrator.run_for_sample(args.sample)
 
+    print("pipeline: sample -> pattern -> rule -> validation")
     for key, value in outputs.items():
         print(f"{key}: {value}")
 
