@@ -107,7 +107,13 @@ def load_config(env_path: str = ".env") -> AppConfig:
     apply_runtime_environment(env_values)
 
     def get(name: str, default: str) -> str:
-        return os.getenv(name, env_values.get(name, default))
+        environment_value = os.getenv(name)
+        if environment_value is not None and environment_value.strip():
+            return environment_value
+        dotenv_value = env_values.get(name)
+        if dotenv_value is not None and dotenv_value.strip():
+            return dotenv_value
+        return default
 
     def get_bool(name: str, default: bool) -> bool:
         raw_value = get(name, "true" if default else "false").strip().lower()

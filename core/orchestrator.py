@@ -38,23 +38,23 @@ class Orchestrator:
             "repair_round": 0,
             "max_repair_rounds": self.config.max_repair_rounds,
         }
-        with self.observability.observation(
-            name="run-sample-pipeline",
-            as_type="span",
-            input_payload={
-                "sample_id": sample.sample_id,
-                "cve": sample.list_field("cve"),
-                "subsystem": sample.text_field("subsystem", default="unknown"),
-                "sample_path": sample_path,
-                "max_repair_rounds": self.config.max_repair_rounds,
-            },
-            metadata={
-                "langgraph_available": StateGraph is not None,
-                "pattern_backend": self.pattern_agent.profile.backend,
-                "rule_backend": self.rule_agent.profile.backend,
-            },
-        ) as observation:
-            try:
+        try:
+            with self.observability.observation(
+                name="run-sample-pipeline",
+                as_type="span",
+                input_payload={
+                    "sample_id": sample.sample_id,
+                    "cve": sample.list_field("cve"),
+                    "subsystem": sample.text_field("subsystem", default="unknown"),
+                    "sample_path": sample_path,
+                    "max_repair_rounds": self.config.max_repair_rounds,
+                },
+                metadata={
+                    "langgraph_available": StateGraph is not None,
+                    "pattern_backend": self.pattern_agent.profile.backend,
+                    "rule_backend": self.rule_agent.profile.backend,
+                },
+            ) as observation:
                 final_state = self.graph.invoke(initial_state)
                 outputs = self._build_outputs(final_state)
                 validation: ValidationResult = final_state["validation"]
@@ -68,8 +68,8 @@ class Orchestrator:
                     },
                 )
                 return outputs
-            finally:
-                self.observability.flush()
+        finally:
+            self.observability.flush()
 
     def _build_graph(self) -> Any:
         if StateGraph is None:

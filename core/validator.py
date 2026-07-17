@@ -16,12 +16,17 @@ class Validator:
         self.config = config
 
     def validate_rule(self, rule_path: Path) -> ValidationResult:
-        if self._resolve_codeql_executable():
-            return self._validate_with_codeql(rule_path)
+        codeql_executable = self._resolve_codeql_executable()
+        if codeql_executable:
+            return self._validate_with_codeql(rule_path, codeql_executable)
         return self._validate_with_static_checks(rule_path)
 
-    def _validate_with_codeql(self, rule_path: Path) -> ValidationResult:
-        command = [self._resolve_codeql_executable(), "query", "compile", str(rule_path)]
+    def _validate_with_codeql(
+        self,
+        rule_path: Path,
+        codeql_executable: str,
+    ) -> ValidationResult:
+        command = [codeql_executable, "query", "compile", str(rule_path)]
         completed = subprocess.run(
             command,
             check=False,
@@ -85,8 +90,10 @@ class Validator:
 
     def _resolve_codeql_executable(self) -> str | None:
         configured = self.config.codeql_path
-        if configured and Path(configured).exists():
-            return configured
+        if not configured:
+            return None
+        if Path(configured).is_file():
+            return str(Path(configured))
         return shutil.which(configured)
 
     def _should_fallback_to_static(self, notes: list[str]) -> bool:
