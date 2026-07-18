@@ -7,10 +7,16 @@ from agents.base import BaseAgent
 from core.config import AppConfig
 from core.models import ValidationResult
 from core.observability import Observability
+from core.ql_policy import API_PROFILE_ID, validate_ql_policy
 
 
 class RuleAgent(BaseAgent):
     """Generate CodeQL rules from pattern documents."""
+
+    _FENCED_CODE_BLOCK = re.compile(
+        r"```[ \t]*(?P<language>[A-Za-z0-9_-]*)[ \t]*\r?\n(?P<code>.*?)```",
+        flags=re.DOTALL,
+    )
 
     def __init__(self, config: AppConfig, observability: Observability | None = None) -> None:
         super().__init__(config, Path("prompts/rule_agent.md"), "rule", observability)
@@ -44,7 +50,7 @@ class RuleAgent(BaseAgent):
                 )
             )
             if model_output:
-                output = model_output.strip() + "\n"
+                output = self._normalize_model_output(model_output)
                 observation.update(
                     output=output,
                     metadata={"agent": "rule", "execution_mode": "llm", "attempt": attempt},
@@ -100,9 +106,6 @@ select
     any(string name | isPatternSanitizerHint(name) | name)
 
 /*
-Prompt context:
-{self.system_prompt}
-
 Generation attempt: {attempt}
 {feedback_block}
 */
@@ -116,6 +119,42 @@ Generation attempt: {attempt}
                 },
             )
             return output
+
+    def _normalize_model_output(self, model_output: str) -> str:
+        """Extract one CodeQL query and reject structurally incomplete model output."""
+        text = model_output.strip()
+        fenced_blocks = [
+            (match.group("language").strip().lower(), match.group("code").strip())
+            for match in self._FENCED_CODE_BLOCK.finditer(text)
+        ]
+
+        if fenced_blocks:
+            preferred_blocks = [
+                code for language, code in fenced_blocks if language in {"ql", "codeql"}
+            ]
+            if not preferred_blocks and len(fenced_blocks) == 1:
+                language, code = fenced_blocks[0]
+                if language in {"", "text", "plaintext"}:
+                    preferred_blocks = [code]
+            if not preferred_blocks:
+                languages = ", ".join(language or "unlabeled" for language, _ in fenced_blocks)
+                raise ValueError(
+                    "RuleAgent model output did not contain an unambiguous CodeQL fence; "
+                    f"found: {languages}."
+                )
+            text = preferred_blocks[0]
+
+        self._validate_ql_structure(text)
+        return text.rstrip() + "\n"
+
+    def _validate_ql_structure(self, code: str) -> None:
+        policy = validate_ql_policy(code)
+        if not policy.structure_ok:
+            raise ValueError(
+                "RuleAgent model output violates the FreeVRG CodeQL policy: "
+                + ", ".join(policy.errors)
+                + "."
+            )
 
     def _extract_pattern_name(self, pattern_text: str) -> str:
         match = re.search(r"^# Pattern:\s+(.+)$", pattern_text, flags=re.MULTILINE)
@@ -171,7 +210,14 @@ Generation attempt: {attempt}
         notes = " | ".join(feedback.notes) if feedback.notes else "none"
         return (
             f"Validation feedback: mode={feedback.validation_mode}, "
-            f"compile_ok={feedback.compile_ok}, should_repair={feedback.should_repair}, "
+            f"structure_ok={feedback.structure_ok}, compile_ok={feedback.compile_ok}, "
+            f"recall_ok={feedback.recall_ok}, "
+            f"false_positive_ok={feedback.false_positive_ok}, "
+            f"vulnerable_results={feedback.vulnerable_result_count}, "
+            f"fixed_results={feedback.fixed_result_count}, "
+            f"vulnerable_locations={feedback.vulnerable_locations}, "
+            f"fixed_locations={feedback.fixed_locations}, "
+            f"failure_type={feedback.failure_type}, should_repair={feedback.should_repair}, "
             f"notes={notes}"
         )
 
@@ -186,9 +232,16 @@ Generation attempt: {attempt}
             [
                 "Generate a single CodeQL query file for the following pattern.",
                 "Requirements:",
+                f"- Follow the {API_PROFILE_ID} API profile from the system prompt.",
                 "- Output only CodeQL code.",
                 "- Include import statements and query metadata.",
+                "- Prefer an intraprocedural AST query; use modular dataflow only when needed.",
+                "- For the current array-index and protocol-length pilots, stay AST-first and do not use RemoteFlowSource.",
                 "- Model source, sink, and sanitizer hints from the pattern.",
+                "- Normalize typedefs with getType().getUnspecifiedType() before IntegralType checks.",
+                "- Carry Variable identity across AST occurrences using VariableAccess.getTarget().",
+                "- Do not use an Expr node occurrence as the identity shared by source, sink, and guard.",
+                "- Import commons.Assertions whenever the query uses Assertion.",
                 f"- Repair attempt index: {attempt}",
                 self._format_feedback(validation_feedback),
                 "",

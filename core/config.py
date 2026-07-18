@@ -44,6 +44,10 @@ class AppConfig:
     patterns_dir: Path
     rules_dir: Path
     results_dir: Path
+    codeql_additional_packs: tuple[Path, ...] = ()
+    validation_databases_dir: Path | None = None
+    validation_expected_vulnerable_results: int = 1
+    validation_expected_fixed_results: int = 0
 
     def profile_for(self, agent_name: str) -> LLMProfile:
         normalized = agent_name.strip().lower()
@@ -119,6 +123,18 @@ def load_config(env_path: str = ".env") -> AppConfig:
         raw_value = get(name, "true" if default else "false").strip().lower()
         return raw_value in {"1", "true", "yes", "on"}
 
+    def get_paths(name: str) -> tuple[Path, ...]:
+        raw_value = get(name, "")
+        return tuple(
+            Path(item.strip())
+            for item in raw_value.split(os.pathsep)
+            if item.strip()
+        )
+
+    def get_optional_path(name: str) -> Path | None:
+        raw_value = get(name, "").strip()
+        return Path(raw_value) if raw_value else None
+
     return AppConfig(
         langfuse_enabled=get_bool("LANGFUSE_ENABLED", True),
         langfuse_public_key=get("LANGFUSE_PUBLIC_KEY", ""),
@@ -131,18 +147,18 @@ def load_config(env_path: str = ".env") -> AppConfig:
         llm_backend=get("LLM_BACKEND", "mock"),
         llm_api_key=get("LLM_API_KEY", ""),
         llm_base_url=get("LLM_BASE_URL", ""),
-        llm_timeout_seconds=int(get("LLM_TIMEOUT_SECONDS", "60")),
+        llm_timeout_seconds=int(get("LLM_TIMEOUT_SECONDS", "100")),
         pattern_llm_backend=get("PATTERN_LLM_BACKEND", get("LLM_BACKEND", "mock")),
         pattern_llm_api_key=get("PATTERN_LLM_API_KEY", get("LLM_API_KEY", "")),
         pattern_llm_base_url=get("PATTERN_LLM_BASE_URL", get("LLM_BASE_URL", "")),
         pattern_llm_timeout_seconds=int(
-            get("PATTERN_LLM_TIMEOUT_SECONDS", get("LLM_TIMEOUT_SECONDS", "60"))
+            get("PATTERN_LLM_TIMEOUT_SECONDS", get("LLM_TIMEOUT_SECONDS", "100"))
         ),
         rule_llm_backend=get("RULE_LLM_BACKEND", get("LLM_BACKEND", "mock")),
         rule_llm_api_key=get("RULE_LLM_API_KEY", get("LLM_API_KEY", "")),
         rule_llm_base_url=get("RULE_LLM_BASE_URL", get("LLM_BASE_URL", "")),
         rule_llm_timeout_seconds=int(
-            get("RULE_LLM_TIMEOUT_SECONDS", get("LLM_TIMEOUT_SECONDS", "60"))
+            get("RULE_LLM_TIMEOUT_SECONDS", get("LLM_TIMEOUT_SECONDS", "100"))
         ),
         pattern_model=get("PATTERN_MODEL", "gpt-4.1"),
         rule_model=get("RULE_MODEL", "gpt-4.1"),
@@ -154,6 +170,14 @@ def load_config(env_path: str = ".env") -> AppConfig:
         patterns_dir=Path(get("PATTERNS_DIR", "data/patterns")),
         rules_dir=Path(get("RULES_DIR", "data/rules")),
         results_dir=Path(get("RESULTS_DIR", "data/results")),
+        codeql_additional_packs=get_paths("CODEQL_ADDITIONAL_PACKS"),
+        validation_databases_dir=get_optional_path("VALIDATION_DATABASES_DIR"),
+        validation_expected_vulnerable_results=int(
+            get("VALIDATION_EXPECTED_VULNERABLE_RESULTS", "1")
+        ),
+        validation_expected_fixed_results=int(
+            get("VALIDATION_EXPECTED_FIXED_RESULTS", "0")
+        ),
     )
 
 

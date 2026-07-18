@@ -59,11 +59,19 @@ class Orchestrator:
                 outputs = self._build_outputs(final_state)
                 validation: ValidationResult = final_state["validation"]
                 observation.update(
-                    output=outputs,
+                    output={
+                        "artifacts": outputs,
+                        "validation": validation.to_dict(),
+                    },
                     metadata={
                         "final_repair_round": final_state.get("repair_round", 0),
                         "validation_mode": validation.validation_mode,
                         "compile_ok": validation.compile_ok,
+                        "recall_ok": validation.recall_ok,
+                        "false_positive_ok": validation.false_positive_ok,
+                        "vulnerable_result_count": validation.vulnerable_result_count,
+                        "fixed_result_count": validation.fixed_result_count,
+                        "failure_type": validation.failure_type,
                         "should_repair": validation.should_repair,
                     },
                 )
@@ -142,7 +150,8 @@ class Orchestrator:
             input_payload={"rule_path": rule_path},
             metadata={"repair_round": state.get("repair_round", 0)},
         ) as observation:
-            validation = self.validator.validate_rule(rule_path)
+            sample: SampleRecord = state["sample"]
+            validation = self.validator.validate_rule(rule_path, sample=sample)
             result_path = self.validator.write_result(validation)
             repair_round = int(state.get("repair_round", 0))
             if validation.should_repair:
@@ -155,6 +164,11 @@ class Orchestrator:
                 metadata={
                     "validation_mode": validation.validation_mode,
                     "compile_ok": validation.compile_ok,
+                    "recall_ok": validation.recall_ok,
+                    "false_positive_ok": validation.false_positive_ok,
+                    "vulnerable_result_count": validation.vulnerable_result_count,
+                    "fixed_result_count": validation.fixed_result_count,
+                    "failure_type": validation.failure_type,
                     "should_repair": validation.should_repair,
                 },
             )
@@ -175,12 +189,18 @@ class Orchestrator:
 
     def _build_outputs(self, state: WorkflowState) -> dict[str, str]:
         sample: SampleRecord = state["sample"]
-        return {
+        outputs = {
             "sample": str(sample.source_path),
             "pattern": str(state["pattern_path"]),
             "rule": str(state["rule_path"]),
             "result": str(state["result_path"]),
         }
+        validation: ValidationResult = state["validation"]
+        if validation.vulnerable_sarif:
+            outputs["vulnerable_sarif"] = validation.vulnerable_sarif
+        if validation.fixed_sarif:
+            outputs["fixed_sarif"] = validation.fixed_sarif
+        return outputs
 
 
 class _FallbackWorkflow:

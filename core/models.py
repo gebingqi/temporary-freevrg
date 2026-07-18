@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Literal
 
 
 def slugify(value: str) -> str:
@@ -84,12 +84,34 @@ class SampleRecord:
 @dataclass(slots=True)
 class ValidationResult:
     rule_name: str
-    compile_ok: bool
+    compile_ok: bool | None
     recall_ok: bool | None
     false_positive_ok: bool | None
-    validation_mode: str
+    validation_mode: Literal["codeql-compile", "codeql-mechanism", "static-only"]
     should_repair: bool
     notes: list[str] = field(default_factory=list)
+    structure_ok: bool = True
+    vulnerable_result_count: int | None = None
+    fixed_result_count: int | None = None
+    expected_vulnerable_result_count: int | None = None
+    expected_fixed_result_count: int | None = None
+    vulnerable_locations: list[str] = field(default_factory=list)
+    fixed_locations: list[str] = field(default_factory=list)
+    vulnerable_database: str | None = None
+    fixed_database: str | None = None
+    vulnerable_sarif: str | None = None
+    fixed_sarif: str | None = None
+    failure_type: Literal[
+        "none",
+        "structure-error",
+        "tool-unavailable",
+        "tool-environment",
+        "tool-execution",
+        "compile-error",
+        "recall-error",
+        "false-positive-error",
+        "mechanism-error",
+    ] = "none"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
