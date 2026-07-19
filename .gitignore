@@ -224,6 +224,7 @@ data/patterns/*
 !data/patterns/.gitkeep
 data/rules/*
 !data/rules/.gitkeep
+!data/rules/qlpack.yml
 data/results/*
 !data/results/.gitkeep
 
